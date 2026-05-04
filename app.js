@@ -5,13 +5,13 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, getDo
 
 /** 1) Firebase Configuration */
 const firebaseConfig = {
-  apiKey: "AIzaSyCQ9xt6u1mr9cHGHWVJnVXlJY5wy9noL-4",
-  authDomain: "time-d77ad.firebaseapp.com",
-  projectId: "time-d77ad",
-  storageBucket: "time-d77ad.firebasestorage.app",
-  messagingSenderId: "174419203695",
-  appId: "1:174419203695:web:ab7eb33b68b4de2cab5f9a",
-  measurementId: "G-DGN4GHV5JD"
+  apiKey: "AIzaSyBb426TWAtgNOu32ZeP7gSIySZiWrtZBM4",
+  authDomain: "timetable-97e6a.firebaseapp.com",
+  projectId: "timetable-97e6a",
+  storageBucket: "timetable-97e6a.firebasestorage.app",
+  messagingSenderId: "106716769819",
+  appId: "1:106716769819:web:62d3acc8201dbbc46d52be",
+  measurementId: "G-1J2PXCG1XD"
 };
 
 const app = initializeApp(firebaseConfig);
