@@ -68,7 +68,6 @@ let isBypassMode = localStorage.getItem("isBypassMode") === "true";
 let isManualMode = false;
 
 const adminManualBtn = document.getElementById("adminManualBtn");
-const adminRegBtn = document.getElementById("adminRegBtn");
 
 function updateAdvancedBtns() {
   if (adminManualBtn) adminManualBtn.style.border = isManualMode ? "2px solid var(--md-sys-color-primary)" : "none";
@@ -76,7 +75,6 @@ function updateAdvancedBtns() {
 if (adminManualBtn) adminManualBtn.addEventListener("click", () => { 
   enterManualMode();
 });
-if (adminRegBtn) adminRegBtn.addEventListener("click", () => { alert("מצב עריכת שמות משתמשים פעיל ברשימת הצוותים."); });
 
 // ----- Floating Admin Bar Logic -----
 const floatingAdminBar = document.getElementById("floatingAdminBar");
