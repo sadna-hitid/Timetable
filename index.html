@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" data-theme="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>לוח שיבוצים - מערכת</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <h1 class="title" id="appTitle">לוח שיבוצים - חדר עץ</h1>
+        <span class="sub">א׳–ה׳ 16:00–22:00 · ו׳ 08:00–14:00 · שבת – אין משמרת</span>
+      </div>
+      <div class="header-actions">
+        <span id="whoami" class="id-badge">לא מחובר</span>
+        <button id="switchUserBtn" class="secondary">החלף משתמש</button>
+        <button id="hubBtn" class="icon-btn" title="מסך ראשי (Hub)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </button>
+        <button id="themeBtn" class="icon-btn" title="מצב בהיר/כהה">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
+        <button id="adminBtn" class="icon-btn" title="מצב ניהול">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-icon lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="two" id="mainContainer">
+      <!-- hub view -->
+      <section id="hubView" class="panel" style="display:none; grid-column: 1 / -1; width:100%; margin: 0 auto;">
+        <div class="hd" style="display:flex; align-items:center; justify-content: space-between; gap: 16px;">
+          <h3 style="margin:0; font-size: 24px;">סידור עבודה שבועי - כל החדרים</h3>
+          <span id="hubDateBadge" class="badge" style="font-size: 14px; padding: 6px 12px;"></span>
+        </div>
+        <div class="bd" style="overflow:hidden;">
+          <div id="hubGrid" style="display:flex; gap:12px; width: 100%; padding: 4px 0 8px 0;"></div>
+        </div>
+      </section>
+
+      <!-- schedule -->
+      <section class="panel schedule-panel" id="mainSchedulePanel">
+        <div class="hd" style="display:flex;align-items:center">
+          <h3 style="margin-inline-end:12px">לוח שיבוצים</h3>
+          <span id="dateRangeBadge" class="badge" style="margin-inline-end:auto"></span>
+
+          <button id="viewOnlyBtn" class="ghost" title="צפייה נקייה">צפייה</button>
+          <button id="addCalendarBtn" class="ghost" title="הוסף ליומן">
+            <span style="display:inline-flex;gap:8px;align-items:center">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <path d="M16 2v4M8 2v4M3 10h18M12 14v6M9 17h6" />
+              </svg>
+              הוסף ליומן
+            </span>
+          </button>
+        </div>
+        <div class="bd">
+          <div id="scheduleGrid" class="schedule"></div>
+          <div id="summaryBox" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <!-- constraints -->
+      <section class="panel constraints" id="mainConstraintsPanel">
+        <div class="hd">
+          <h3>אילוצים</h3>
+        </div>
+        <div class="bd">
+          <div class="people" id="peopleChipsContainer">
+            <!-- Dynamic chips -->
+          </div>
+          <div id="daysGrid" class="days"></div>
+          <div class="legend" style="margin-top:12px; font-weight:500; color:var(--md-sys-color-on-surface-variant)">
+            <span class="dot dot-0"></span> זמין &nbsp;&bull;&nbsp;
+            <span class="dot dot-1"></span> מעדיף שלא &nbsp;&bull;&nbsp;
+            <span class="dot dot-2"></span> לא זמין
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="resetMineBtn" class="ghost">אפס את האילוצים שלי</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
+
+  <!-- Identity Modal -->
+  <div id="identityBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <h2 id="identityModalTitle">מי אתה?</h2>
+      <p>בחר שם משתמש לעריכה. ההגדרה נשמרת אוטומטית.</p>
+      <div class="row">
+        <label for="identitySelect">שם משתמש</label>
+        <select id="identitySelect" class="select">
+          <option value="נבו">נבו</option>
+          <option value="טל">טל</option>
+          <option value="נטע">נטע</option>
+        </select>
+      </div>
+      <div class="actions"><button id="identityStartBtn" type="button">התחל</button></div>
+    </div>
+  </div>
+
+  <!-- Admin Modal -->
+  <div id="adminBackdrop" class="modal-backdrop">
+    <div class="modal" style="width: min(600px, 92vw); max-height: 90vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+        <h2 style="margin:0;">מצב ניהול</h2>
+        <div class="modal-tabs" style="display:flex; gap:8px;">
+          <button id="adminTabRoomBtn" class="secondary" style="border-radius:8px;">ניהול חדר</button>
+          <button id="adminTabSystemBtn" class="ghost" style="border-radius:8px;">מערכת וחדרים</button>
+          <button id="adminTabSpecialBtn" class="ghost" style="border-radius:8px;">אירועים מיוחדים</button>
+        </div>
+      </div>
+      
+      <!-- TAB: Room (current) -->
+      <div id="adminTabRoomContent">
+        <p>פעולות מיוחדות עבור החדר הנוכחי (<span id="adminCurrentRoomLabel" style="font-weight:700;"></span>).</p>
+        
+        <div class="row">
+          <label for="dateInput" style="min-width:120px;">תאריך התחלה לחדר זה</label>
+          <input id="dateInput" class="date" type="date" style="flex:1" />
+        </div>
+        <div class="row" style="margin-bottom:12px;">
+          <label for="rangeWeeksInput" style="min-width:120px;">משך זמן תצוגה</label>
+          <select id="rangeWeeksInput" class="select" style="flex:1">
+            <option value="1">שבוע 1</option>
+            <option value="2">2 שבועות</option>
+            <option value="3">3 שבועות</option>
+            <option value="4">4 שבועות</option>
+          </select>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin:16px 0;" />
+        <h3>שעות משמרת (פר יום)</h3>
+        <p class="sub" style="margin-top:4px; margin-bottom:12px;">בחר שעת התחלה. משמרת היא 6 שעות (למשל מ-14:30 עד 20:30).</p>
+        <div id="adminShiftTimesList" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:24px;">
+           <!-- Dynamically generated in JS -->
+        </div>
+
+        <div class="row" style="margin-bottom:24px; border-top:1px solid var(--border); padding-top:24px;">
+          <button id="adminResetBtn" class="ghost" style="border-color:#f00;color:#fca5a5" type="button">איפוס טבלה</button>
+          <span class="sub" style="margin:0; flex:1;">מוחק את האילוצים של הטווח הנוכחי בחדר זה.</span>
+        </div>
+      </div>
+      
+      <!-- TAB: Special Days -->
+      <div id="adminTabSpecialContent" style="display:none;">
+        <p>ימים מיוחדים / חגים / אירועים</p>
+        <p class="sub">הגדרה זו חלה באופן גורף על כל החדרים יחד. (לדוגמה: מוסד סגור לחלוטין או שעות משמרת מתקצרות).</p>
+        <div id="adminSpecialDaysList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;"></div>
+        <div class="row" style="align-items:center; flex-wrap:wrap">
+          <input id="specialDateInput" class="date" type="date" style="flex:1" />
+          <input id="specialTitleInput" type="text" placeholder="כותרת (למשל חג פסח)" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:4px; background:var(--md-sys-color-surface); color:var(--md-sys-color-on-surface);" />
+        </div>
+        <div class="row" style="align-items:center; justify-content:space-between">
+          <select id="specialTypeInput" class="select" style="flex:1">
+            <option value="no_shifts">אין משמרות (סגור)</option>
+            <option value="close_early">סוגרים מוקדם</option>
+          </select>
+          <button id="addSpecialDayBtn" class="secondary" type="button" style="margin-right:8px">הוסף</button>
+        </div>
+      </div>
+
+      <!-- TAB: System & Rooms -->
+      <div id="adminTabSystemContent" style="display:none;">
+        <p>ניהול החדרים והצוותים - ההגדרות ישפיעו על תפריט הניווט התחתון לכל המשתמשים.</p>
+        
+        <hr style="border:0; border-top:1px solid var(--border); margin:16px 0;" />
+        <h3>ניהול החזית (חדרים וצוותים)</h3>
+        <p class="sub">שמות קצרים המופרדים בפסיק. כל חדר מנוהל כלוח שיבוץ נפרד.</p>
+        <div id="adminRoomsList" style="display:flex; flex-direction:column; gap:16px; margin-bottom:12px;"></div>
+        <div class="row">
+          <button id="adminAddRoomBtn" class="secondary" type="button">+ הוספת חדר חדש</button>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin:24px 0 16px;" />
+        <h3 style="color:var(--md-sys-color-tertiary)">ניהול ידני ומתקדם</h3>
+        <p class="sub">אפשרויות אלו מיועדות למנהלי מערכת בלבד לצורך עקיפת האוטומציה.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;">
+          <button id="adminManualBtn" class="secondary" type="button" style="background:var(--md-sys-color-tertiary-container); color:var(--md-sys-color-on-tertiary-container); border-radius:12px;">מצב שינוי ידני</button>
+          <button id="adminRegBtn" class="secondary" type="button" style="background:var(--md-sys-color-tertiary-container); color:var(--md-sys-color-on-tertiary-container); border-radius:12px;">שינוי רישום</button>
+        </div>
+      </div>
+
+      <!-- Actions (Always visible) -->
+      <div class="actions" style="margin-top:24px; border-top:1px solid var(--border); padding-top:16px;">
+        <button id="adminCancelBtn" class="ghost" type="button">ביטול</button>
+        <button id="adminSaveBtn" type="button">שמור והחל שינויים</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Reset Modal -->
+  <div id="confirmResetBackdrop" class="modal-backdrop">
+    <div class="modal" style="width: min(400px, 90vw);">
+      <h2 style="color:var(--md-sys-color-error); display:flex; align-items:center; gap:8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        איפוס המערכת
+      </h2>
+      <p style="margin-bottom:24px;">האם אתה בטוח שברצונך למחוק לחלוטין את כל האילוצים והשיבוצים של עובדים לטווח התאריכים הנוכחי בחדר זה?<br><br><b>פעולה זו תמחק את המידע מענן ללא אפשרות שחזור!</b></p>
+      <div class="actions">
+        <button id="confirmResetCancelBtn" class="ghost" type="button">ביטול, התחרטתי</button>
+        <button id="confirmResetActionBtn" type="button" style="background:var(--md-sys-color-error); color:var(--md-sys-color-on-error); border-radius:9999px; font-weight:600; padding:10px 24px; border:none; cursor:pointer;">כן, מחק הכל</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Room Tabs -->
+  <div id="bottomTabs" class="bottom-tabs"></div>
+
+  <!-- Loader Overlay -->
+  <div id="loaderOverlay" class="loader-overlay">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <p>טוען נתונים...</p>
+    </div>
+  </div>
+
+  <!-- Floating Admin Bar -->
+  <div id="floatingAdminBar" class="floating-admin-bar" style="display:none;">
+    <div class="bar-content">
+      <div class="bar-group">
+        <label class="checkbox-container">
+          <input type="checkbox" id="bypassCheckbox">
+          <span class="checkmark"></span>
+          מעקף חישוב
+        </label>
+      </div>
+      <div class="bar-divider"></div>
+      <div class="bar-group">
+        <button id="manualUndoBtn" class="icon-btn" title="בטל פעולה (Undo)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+        </button>
+        <button id="manualRedoBtn" class="icon-btn" title="בצע שוב (Redo)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
+        </button>
+      </div>
+      <div class="bar-divider"></div>
+      <div class="bar-group">
+        <button id="manualCancelBtn" class="ghost">ביטול</button>
+        <button id="manualSaveBtn" class="primary">שמירה</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+
+</html>

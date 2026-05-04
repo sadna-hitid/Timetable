@@ -1,0 +1,23 @@
+// Cloud Firestore security rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // דרוש משתמש מחובר (אנונימי/אחר)
+    function authed() { return request.auth != null; }
+
+    match /constraints/{month}/{document=**} {
+      allow read: if authed();
+      allow write: if authed();
+    }
+
+    match /settings/{document=**} {
+      allow read: if authed();
+      allow write: if authed();
+    }
+
+    match /assignments/{dateKey} {
+      allow read: if authed();
+      allow write: if authed();
+    }
+  }
+}
