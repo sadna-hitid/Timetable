@@ -43,16 +43,17 @@ function getAutoStartDate(mode) {
     }
     return hubSun;
   } else {
-    // Selection panel displays next week. Resets on Wed 12:00 PM to the following week.
-    let nextSun = new Date(now);
-    nextSun.setHours(0, 0, 0, 0);
-    if (nextSun.getDay() !== 0) {
-      nextSun.setDate(nextSun.getDate() + (7 - nextSun.getDay()));
-    }
+    // Selection panel displays current week until Wed 12:00 PM, then switches to next week.
+    let targetSun = new Date(now);
+    targetSun.setHours(0, 0, 0, 0);
+    // Go to current week's Sunday
+    targetSun.setDate(targetSun.getDate() - targetSun.getDay());
+    
+    // Switch to next week only from Wednesday 12:00 PM onwards
     if ((day === 3 && hour >= 12) || day > 3) {
-      nextSun.setDate(nextSun.getDate() + 7);
+      targetSun.setDate(targetSun.getDate() + 7);
     }
-    return nextSun;
+    return targetSun;
   }
 }
 
