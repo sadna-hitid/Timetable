@@ -582,13 +582,13 @@ function computeSchedule() {
        candidates.sort((a, b) => totalCounts[a] - totalCounts[b]);
     } else {
       candidates.sort((a, b) => {
-        // 1. Prioritize people with fewer shifts assigned so far in this range
-        if (totalCounts[a] !== totalCounts[b]) return totalCounts[a] - totalCounts[b];
-
-        // 2. Prioritize "Available" (0) over "Prefer Not" (1)
+        // 1. Prioritize "Available" (0) over "Prefer Not" (1)
         const vA = Number(row[a] ?? 0);
         const vB = Number(row[b] ?? 0);
         if (vA !== vB) return vA - vB;
+
+        // 2. Prioritize people with fewer shifts assigned so far in this range
+        if (totalCounts[a] !== totalCounts[b]) return totalCounts[a] - totalCounts[b];
 
         // 3. Tie-breaker: Person with the fewest total available slots in the entire period
         return availabilityFrequency[a] - availabilityFrequency[b];
