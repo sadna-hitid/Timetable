@@ -33,8 +33,8 @@ function getAutoStartDate(mode) {
   const day = now.getDay();
   const hour = now.getHours();
 
-  if (mode === "hub") {
-    // Hub displays current week until Saturday 08:00 AM
+  if (mode === "hub" || mode === "view") {
+    // Hub and View Only display current week until Saturday 08:00 AM
     let hubSun = new Date(now);
     hubSun.setHours(0, 0, 0, 0);
     hubSun.setDate(hubSun.getDate() - hubSun.getDay());
@@ -245,8 +245,16 @@ let startDate;
 if (urlWeek) {
   startDate = startOfDay(new Date(urlWeek));
 } else {
-  startDate = getAutoStartDate(isHubMode ? "hub" : "selection");
+  startDate = getAutoStartDate(isHubMode ? "hub" : (isViewMode ? "view" : "selection"));
 }
+
+// Sync URL to ensure it always has room, week, and view if applicable
+const syncUrl = new URL(window.location.href);
+syncUrl.searchParams.set("room", activeRoom);
+syncUrl.searchParams.set("week", fmtDateKey(startDate));
+if (isHubMode) syncUrl.searchParams.set("view", "hub");
+else if (isViewMode) syncUrl.searchParams.set("view", "1");
+window.history.replaceState({}, "", syncUrl.toString());
 
 let endDate = new Date(startDate.getTime() + 30 * MS_DAY);
 
