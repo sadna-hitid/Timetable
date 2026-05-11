@@ -43,6 +43,19 @@
   --md-sys-color-outline: #938F99;
   --md-sys-color-outline-variant: #49454F;
 
+  /* Custom Palette for Staff and Rooms (Dark Mode) */
+  --palette-red-bg: #93000A; --palette-red-ink: #FFDAD6;
+  --palette-pink-bg: #633B48; --palette-pink-ink: #FFD8E4;
+  --palette-purple-bg: #4F378B; --palette-purple-ink: #EADDFF;
+  --palette-indigo-bg: #3F418D; --palette-indigo-ink: #E0E0FF;
+  --palette-blue-bg: #00497D; --palette-blue-ink: #D3E4FF;
+  --palette-cyan-bg: #004D79; --palette-cyan-ink: #C3E8FF;
+  --palette-teal-bg: #005246; --palette-teal-ink: #85F8E2;
+  --palette-green-bg: #0F5200; --palette-green-ink: #B5F2A6;
+  --palette-amber-bg: #594300; --palette-amber-ink: #FFDF99;
+  --palette-orange-bg: #7A2E00; --palette-orange-ink: #FFDBC9;
+  --palette-brown-bg: #622818; --palette-brown-ink: #F6D8CE;
+
   /* Aliasing original UI needs to M3 tokens */
   --bg: var(--md-sys-color-background);
   --card: var(--md-sys-color-surface-container);
@@ -131,10 +144,36 @@ html[data-theme="light"] {
   --md-sys-color-outline: #79747E;
   --md-sys-color-outline-variant: #CAC4D0;
 
+  /* Custom Palette for Staff and Rooms (Light Mode) */
+  --palette-red-bg: #FFDAD6; --palette-red-ink: #410002;
+  --palette-pink-bg: #FFD8E4; --palette-pink-ink: #31111D;
+  --palette-purple-bg: #EADDFF; --palette-purple-ink: #21005D;
+  --palette-indigo-bg: #E0E0FF; --palette-indigo-ink: #161559;
+  --palette-blue-bg: #D3E4FF; --palette-blue-ink: #001C38;
+  --palette-cyan-bg: #C3E8FF; --palette-cyan-ink: #001D32;
+  --palette-teal-bg: #85F8E2; --palette-teal-ink: #00201A;
+  --palette-green-bg: #B5F2A6; --palette-green-ink: #002106;
+  --palette-amber-bg: #FFDF99; --palette-amber-ink: #251A00;
+  --palette-orange-bg: #FFDBC9; --palette-orange-ink: #331200;
+  --palette-brown-bg: #F6D8CE; --palette-brown-ink: #381206;
+
   --elevation-1: 0px 1px 3px 1px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);
   --elevation-2: 0px 2px 6px 2px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);
   --elevation-3: 0px 4px 8px 3px rgba(0,0,0,0.05), 0px 1px 3px 0px rgba(0,0,0,0.1);
 }
+
+/* Palette utility classes */
+.palette-red { background: var(--palette-red-bg) !important; color: var(--palette-red-ink) !important; }
+.palette-pink { background: var(--palette-pink-bg) !important; color: var(--palette-pink-ink) !important; }
+.palette-purple { background: var(--palette-purple-bg) !important; color: var(--palette-purple-ink) !important; }
+.palette-indigo { background: var(--palette-indigo-bg) !important; color: var(--palette-indigo-ink) !important; }
+.palette-blue { background: var(--palette-blue-bg) !important; color: var(--palette-blue-ink) !important; }
+.palette-cyan { background: var(--palette-cyan-bg) !important; color: var(--palette-cyan-ink) !important; }
+.palette-teal { background: var(--palette-teal-bg) !important; color: var(--palette-teal-ink) !important; }
+.palette-green { background: var(--palette-green-bg) !important; color: var(--palette-green-ink) !important; }
+.palette-amber { background: var(--palette-amber-bg) !important; color: var(--palette-amber-ink) !important; }
+.palette-orange { background: var(--palette-orange-bg) !important; color: var(--palette-orange-ink) !important; }
+.palette-brown { background: var(--palette-brown-bg) !important; color: var(--palette-brown-ink) !important; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -797,4 +836,30 @@ html[data-theme="light"] .loader-overlay {
   letter-spacing: 0.5px;
   font-weight: 700;
   border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Additional palette and UI for color picker */
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform var(--transition-m3-fast), border-color var(--transition-m3-fast);
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: var(--md-sys-color-on-surface);
+  transform: scale(1.1);
 }

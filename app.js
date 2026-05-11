@@ -268,9 +268,38 @@ let monthKey = monthKeyFrom(startDate);
 let state = Object.create(null);
 let specialDays = Object.create(null); // dateKey -> { title, type }
 let excludedUsers = [];
+let staffColors = Object.create(null); // name -> colorClass
 
 let metaUnsub = null;
 let daysUnsub = null;
+
+// ----- Color Palette & Auto Assignment -----
+const PALETTE_CLASSES = [
+  'palette-red', 'palette-pink', 'palette-purple', 'palette-indigo', 
+  'palette-blue', 'palette-cyan', 'palette-teal', 'palette-green', 
+  'palette-amber', 'palette-orange', 'palette-brown'
+];
+
+function stringHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
+function getStaffColor(personName) {
+  if (staffColors[personName]) return staffColors[personName];
+  const idx = stringHash(personName) % PALETTE_CLASSES.length;
+  return PALETTE_CLASSES[idx];
+}
+
+function getRoomColor(roomObj) {
+  if (roomObj.color) return roomObj.color;
+  if (roomObj.id === "printers") return "palette-purple";
+  const idx = stringHash(roomObj.id) % PALETTE_CLASSES.length;
+  return PALETTE_CLASSES[idx];
+}
 
 // ----- Date Utils -----
 function startOfDay(d) { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; }
@@ -346,7 +375,12 @@ function updatePersonUI() {
   document.querySelectorAll(".chip").forEach(btn => {
     const p = btn.dataset.person;
     btn.classList.toggle("active", p === activePerson);
-
+    
+    // Apply staff color
+    const colorCls = getStaffColor(p);
+    PALETTE_CLASSES.forEach(c => btn.classList.remove(c));
+    btn.classList.add(colorCls);
+    
     if (excludedUsers.includes(p)) {
       btn.style.textDecoration = "line-through";
       btn.style.opacity = "0.5";
@@ -650,12 +684,16 @@ function renderSchedule(pack) {
         const absent = PEOPLE.filter(p => Number(row[p] ?? 0) === 2);
         const prefer = PEOPLE.filter(p => Number(row[p] ?? 0) === 1);
 
+        const colorCls = who ? getStaffColor(who) : '';
         html += `
           <div class="slot ${cur.getDay() === 5 ? 'fri' : ''} ${isManualMode ? 'manual-clickable' : ''}" 
                ${isManualMode ? `onclick="handleManualAssign('${key}')"` : ''} 
                style="${isManualMode ? 'cursor:pointer; border:1px dashed var(--md-sys-color-primary);' : ''}">
-            <div class="date">${hebDaysLong[cur.getDay()]}, ${fmtDM(cur)}</div>
-            <div class="${who ? 'pill ok' : 'pill bad'}">${isManuallyAssigned ? '🔒 ' : ''}${who ? `משובץ: <b>${who}</b>` : '❌ אין משובץ'}</div>
+            <div class="datebox">
+               <div class="d-top">${hebDays[cur.getDay()]}</div>
+               <div class="d-time">${fmtDM(cur)}</div>
+            </div>
+            <div class="${who ? `pill ${colorCls}` : 'pill bad'}">${isManuallyAssigned ? '🔒 ' : ''}${who ? `משובץ: <b>${who}</b>` : '❌ אין משובץ'}</div>
             <div class="pill ${sh.specialType ? 'wrap' : ''}">${sh.label}</div>
             ${prefer.length ? `<div class="pill warn" style="font-size:11px">${prefer.join(", ")}</div>` : ``}
             ${absent.length ? `<div class="pill bad" style="font-size:11px">${absent.join(", ")}</div>` : ``}
@@ -820,17 +858,47 @@ function renderAdminRoomsList() {
     div.style.flexDirection = "column";
     div.style.gap = "8px";
     
+    // Generate staff chips
+    const staffChipsHtml = (r.people || []).map(p => {
+      const colorCls = getStaffColor(p);
+      return `<span class="pill ${colorCls} admin-staff-chip" data-person="${p}" style="cursor:pointer; user-select:none;" title="לחץ פעמיים לשינוי צבע">${p}</span>`;
+    }).join("");
+    
+    const roomColorCls = getRoomColor(r);
+
     div.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="pill ${roomColorCls} admin-room-color-btn" data-index="${index}" style="cursor:pointer; padding:8px; margin-left:8px;" title="לחץ פעמיים לשינוי צבע חדר">🎨</div>
         <input type="text" class="select room-name-input" data-index="${index}" placeholder="שם החדר" value="${r.name}" style="flex:1; margin-left:8px;" />
         <button type="button" class="icon-btn" style="color:var(--md-sys-color-error)" onclick="deleteEditingRoom(${index})" title="מחק חדר">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
       </div>
       <div>
-        <input type="text" class="select room-people-input" data-index="${index}" placeholder="שמות הצוות (מופרדים בפסיק)" value="${r.people ? r.people.join(', ') : ''}" style="width:100%; font-size:14px;" />
+        <input type="text" class="select room-people-input" data-index="${index}" placeholder="שמות הצוות (מופרדים בפסיק)" value="${r.people ? r.people.join(', ') : ''}" style="width:100%; font-size:14px; margin-bottom:8px;" />
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">${staffChipsHtml}</div>
       </div>
     `;
+    
+    // Add event listeners after rendering
+    setTimeout(() => {
+      div.querySelectorAll('.admin-staff-chip').forEach(el => {
+        el.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          const pName = el.dataset.person;
+          openColorPicker('person', pName, pName, getStaffColor(pName));
+        });
+      });
+      
+      div.querySelectorAll('.admin-room-color-btn').forEach(el => {
+        el.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          const idx = el.dataset.index;
+          openColorPicker('room', idx, editingRooms[idx].name, getRoomColor(editingRooms[idx]));
+        });
+      });
+    }, 0);
+    
     adminRoomsList.appendChild(div);
   });
 }
@@ -952,10 +1020,72 @@ adminSaveBtn.addEventListener("click", async () => {
     editingRooms[activeIdx].shiftTimes = times;
   }
 
-  await setDoc(ref, { specialDays, rooms: editingRooms }, { merge: true });
+  await setDoc(ref, { specialDays, rooms: editingRooms, staffColors }, { merge: true });
   adminBackdrop.style.display = "none";
   window.location.reload(); // Hard refresh to apply global changes
 });
+
+// ----- Color Picker Logic -----
+const colorPickerBackdrop = document.getElementById("colorPickerBackdrop");
+const colorPickerGrid = document.getElementById("colorPickerGrid");
+const colorPickerCancelBtn = document.getElementById("colorPickerCancelBtn");
+const colorPickerSaveBtn = document.getElementById("colorPickerSaveBtn");
+const colorPickerTargetName = document.getElementById("colorPickerTargetName");
+
+let colorPickerTargetType = null; // 'person' or 'room'
+let colorPickerTargetId = null; // person name or room index
+let selectedColorClass = null;
+
+function openColorPicker(type, id, displayName, currentColor) {
+  colorPickerTargetType = type;
+  colorPickerTargetId = id;
+  selectedColorClass = currentColor;
+  
+  if (colorPickerTargetName) colorPickerTargetName.textContent = displayName;
+  
+  if (colorPickerGrid) {
+    colorPickerGrid.innerHTML = PALETTE_CLASSES.map(cls => `
+      <div class="color-swatch ${cls} ${cls === selectedColorClass ? 'selected' : ''}" data-color="${cls}"></div>
+    `).join("");
+    
+    colorPickerGrid.querySelectorAll('.color-swatch').forEach(el => {
+      el.addEventListener('click', () => {
+        colorPickerGrid.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedColorClass = el.dataset.color;
+      });
+    });
+  }
+  
+  if (colorPickerBackdrop) colorPickerBackdrop.style.display = "flex";
+}
+
+if (colorPickerCancelBtn) {
+  colorPickerCancelBtn.addEventListener("click", () => {
+    colorPickerBackdrop.style.display = "none";
+  });
+}
+
+if (colorPickerSaveBtn) {
+  colorPickerSaveBtn.addEventListener("click", () => {
+    if (colorPickerTargetType === 'person') {
+      staffColors[colorPickerTargetId] = selectedColorClass;
+      updatePersonUI();
+      refreshScheduleUI();
+    } else if (colorPickerTargetType === 'room') {
+      const idx = colorPickerTargetId;
+      if (editingRooms[idx]) {
+        editingRooms[idx].color = selectedColorClass;
+        // Also update immediately if it's the active room to reflect in tabs
+        if (editingRooms[idx].id === activeRoom) {
+          const r = ROOMS.find(r => r.id === activeRoom);
+          if (r) r.color = selectedColorClass;
+        }
+      }
+    }
+    colorPickerBackdrop.style.display = "none";
+  });
+}
 
 async function loadGlobalSettings() {
   const ref = doc(db, "settings", "global");
@@ -964,6 +1094,9 @@ async function loadGlobalSettings() {
     const data = snap.data();
     if (data.specialDays) {
       specialDays = data.specialDays;
+    }
+    if (data.staffColors) {
+      staffColors = data.staffColors;
     }
     if (data.rooms && Array.isArray(data.rooms) && data.rooms.length > 0) {
       ROOMS = data.rooms;
@@ -1146,8 +1279,8 @@ function renderHub() {
     
     html += `
       <div class="panel" style="flex: 1; min-width: 0; border: 1px solid var(--md-sys-color-outline-variant); padding:0; overflow:hidden;">
-        <div style="background:var(--md-sys-color-surface-variant); padding:12px; text-align: center;">
-          <h4 style="margin:0; font-size:17px; color:var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${room.name}</h4>
+        <div class="${getRoomColor(room)}" style="padding:12px; text-align: center;">
+          <h4 style="margin:0; font-size:17px; color:inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${room.name}</h4>
         </div>
         <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
     `;
@@ -1171,11 +1304,12 @@ function renderHub() {
         `;
       } else {
         const who = assign[key] || null;
+        const colorCls = who ? getStaffColor(who) : '';
         html += `
           <div style="${bgStyle}; border-radius:8px; padding:8px 6px; display:flex; justify-content:space-between; align-items:center; gap:4px;">
             <div style="font-weight:700; width:30px; font-size:14px;">${hebDays[cur.getDay()]}</div>
             <div style="font-size:13px; color:var(--md-sys-color-on-surface-variant); font-variant-numeric: tabular-nums; flex:1; text-align:center; font-weight: 500;">${sh.startTime || sh.label}</div>
-            <div class="${who ? 'pill ok' : 'pill bad'}" style="font-size:13px; min-width:65px; padding: 4px 2px; text-align:center; font-weight: 600;">${who ? who : '❌'}</div>
+            <div class="${who ? `pill ${colorCls}` : 'pill bad'}" style="font-size:13px; min-width:65px; padding: 4px 2px; text-align:center; font-weight: 600;">${who ? who : '❌'}</div>
           </div>
         `;
       }
@@ -1257,7 +1391,7 @@ onAuthStateChanged(auth, async (user) => {
 function renderTabs() {
   if (!bottomTabs) return;
   bottomTabs.innerHTML = ROOMS.map(r => `
-    <div class="tab ${r.id === activeRoom ? 'active' : ''}" data-room="${r.id}">
+    <div class="tab ${r.id === activeRoom ? 'active ' + getRoomColor(r) : ''}" data-room="${r.id}">
       ${r.name}
     </div>
   `).join("");
