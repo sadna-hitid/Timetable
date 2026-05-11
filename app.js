@@ -22,6 +22,41 @@ const db = getFirestore(app);
 let PEOPLE = ["עובד 1", "עובד 2", "עובד 3"];
 const MS_DAY = 86400000;
 
+function getIsraelTime() {
+  const now = new Date();
+  // We use the browser's locale conversion to ensure we are looking at Israel time
+  return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+}
+
+function getAutoStartDate(mode) {
+  const now = getIsraelTime();
+  const day = now.getDay();
+  const hour = now.getHours();
+
+  if (mode === "hub") {
+    // Hub displays current week until Saturday 08:00 AM
+    let hubSun = new Date(now);
+    hubSun.setHours(0, 0, 0, 0);
+    hubSun.setDate(hubSun.getDate() - hubSun.getDay());
+    if (day === 6 && hour >= 8) {
+      hubSun.setDate(hubSun.getDate() + 7);
+    }
+    return hubSun;
+  } else {
+    // Selection panel displays next week. Resets on Wed 12:00 PM to the following week.
+    let nextSun = new Date(now);
+    nextSun.setHours(0, 0, 0, 0);
+    if (nextSun.getDay() !== 0) {
+      nextSun.setDate(nextSun.getDate() + (7 - nextSun.getDay()));
+    }
+    if ((day === 3 && hour >= 12) || day > 3) {
+      nextSun.setDate(nextSun.getDate() + 7);
+    }
+    return nextSun;
+  }
+}
+
+
 let ROOMS = [
   { id: "printers", name: "חדר מדפסות", people: ["עובד 1", "עובד 2", "עובד 3"] },
   { id: "wood", name: "חדר עץ", people: ["עובד 1", "עובד 2"] },
@@ -193,23 +228,28 @@ if (manualSaveBtn) {
 }
 
 
+const urlWeek = urlParams.get("week");
+let isHubMode = urlParams.get("view") === "hub";
+
 // View Mode handling
 const isViewMode = urlParams.get("view") === "1";
 if (isViewMode) {
   document.body.classList.add("view-only");
 }
 
-let isHubMode = urlParams.get("view") === "hub";
-
-// Current settings (back to basics)
 let activePerson = localStorage.getItem(`scheduler_person_${activeRoom}`) || PEOPLE[0];
 let rangeWeeks = 4;
-let today = startOfDay(new Date());
-let startDate = new Date(today);
-if (startDate.getDay() !== 0) {
-  startDate = new Date(startDate.getTime() + (7 - startDate.getDay()) * MS_DAY);
+let today = startOfDay(getIsraelTime());
+
+let startDate;
+if (urlWeek) {
+  startDate = startOfDay(new Date(urlWeek));
+} else {
+  startDate = getAutoStartDate(isHubMode ? "hub" : "selection");
 }
+
 let endDate = new Date(startDate.getTime() + 30 * MS_DAY);
+
 let monthKey = monthKeyFrom(startDate);
 
 // Local state: dateKey -> { name: 0/1/2 }
@@ -658,6 +698,7 @@ const adminResetBtn = document.getElementById("adminResetBtn");
 const confirmResetBackdrop = document.getElementById("confirmResetBackdrop");
 const confirmResetCancelBtn = document.getElementById("confirmResetCancelBtn");
 const confirmResetActionBtn = document.getElementById("confirmResetActionBtn");
+const adminShiftTimesList = document.getElementById("adminShiftTimesList");
 
 // Admin mode now controlled by Ctrl+Click on the gear icon
 
@@ -675,16 +716,24 @@ function renderAdminShiftTimes(roomObj) {
   if (!adminShiftTimesList) return;
   const daysMap = {0: "ראשון", 1: "שני", 2: "שלישי", 3: "רביעי", 4: "חמישי", 5: "שישי"};
   const defaultTimes = {0:"16:00", 1:"16:00", 2:"16:00", 3:"16:00", 4:"16:00", 5:"08:00"};
-  const options = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "08:00", "08:30", "09:00"];
+  const regularOptions = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
+  const fridayOptions = ["08:00", "08:30", "09:00"];
   
   let html = "";
   for (let i=0; i<6; i++) {
-    const val = (roomObj && roomObj.shiftTimes && roomObj.shiftTimes[i]) ? roomObj.shiftTimes[i] : defaultTimes[i];
+    const isFriday = i === 5;
+    const currentOptions = isFriday ? fridayOptions : regularOptions;
+    let val = (roomObj && roomObj.shiftTimes && roomObj.shiftTimes[i]) ? roomObj.shiftTimes[i] : defaultTimes[i];
+    
+    if (!currentOptions.includes(val)) {
+      val = currentOptions[0];
+    }
+
     html += `
       <div style="display:flex; flex-direction:column; gap:4px;">
         <label style="font-size:13px; color:var(--md-sys-color-on-surface-variant);">${daysMap[i]}</label>
         <select class="select shift-time-input" data-day="${i}">
-          ${options.map(opt => `<option value="${opt}" ${opt === val ? "selected" : ""}>${opt}</option>`).join("")}
+          ${currentOptions.map(opt => `<option value="${opt}" ${opt === val ? "selected" : ""}>${opt}</option>`).join("")}
         </select>
       </div>
     `;
@@ -920,22 +969,15 @@ async function loadGlobalSettings() {
       localStorage.setItem("scheduler_room", activeRoom);
     }
     
-    // Fallbacks or per-room overrides
-    if (currentRoomData && currentRoomData.startDate) {
-      const [y, m, d] = currentRoomData.startDate.split("-").map(n => parseInt(n, 10));
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) startDate = startOfDay(new Date(y, m - 1, d));
-    } else if (data.startDate) {
-      const [y, m, d] = data.startDate.split("-").map(n => parseInt(n, 10));
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) startDate = startOfDay(new Date(y, m - 1, d));
-    }
-    
-    // Safety check if startDate is still invalid
-    if (isNaN(startDate.getTime())) {
-      let today = startOfDay(new Date());
-      startDate = new Date(today);
-      if (startDate.getDay() !== 0) {
-        startDate = new Date(startDate.getTime() + (7 - startDate.getDay()) * MS_DAY);
-      }
+    // Fallbacks or per-room overrides - Only apply if not using auto-dates or specific week URL
+    if (urlWeek) {
+       // URL param always wins
+    } else {
+       // In auto-mode, we ignore the saved startDate to allow the Wednesday reset to work.
+       // We only fallback to current calculation if for some reason it's invalid.
+       if (isNaN(startDate.getTime())) {
+          startDate = getAutoStartDate(isHubMode ? "hub" : "selection");
+       }
     }
     
     if (currentRoomData && currentRoomData.rangeWeeks) {
@@ -1028,11 +1070,13 @@ END:VEVENT
 function copyViewOnlyLink() {
   const url = new URL(window.location.href);
   url.searchParams.set("view", "1");
+  url.searchParams.set("week", fmtDateKey(startDate));
 
   navigator.clipboard.writeText(url.toString()).then(() => {
     alert("לינק לצפייה נקייה הועתק ללוח!");
   });
 }
+
 
 viewOnlyBtn.addEventListener("click", copyViewOnlyLink);
 addCalendarBtn.addEventListener("click", downloadICSForMe);
