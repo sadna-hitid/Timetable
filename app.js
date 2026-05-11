@@ -34,7 +34,7 @@ function getAutoStartDate(mode) {
   const hour = now.getHours();
 
   if (mode === "hub" || mode === "view") {
-    // Hub and View Only display current week until Saturday 08:00 AM
+    // Hub and View Only display current week until Saturday 08:00 AM (end of the work week)
     let hubSun = new Date(now);
     hubSun.setHours(0, 0, 0, 0);
     hubSun.setDate(hubSun.getDate() - hubSun.getDay());
@@ -43,10 +43,11 @@ function getAutoStartDate(mode) {
     }
     return hubSun;
   } else {
-    // Selection panel displays current week until Wed 12:00 PM, then switches to next week.
+    // Selection panel (regular mode) displays current week until Wednesday 12:00 PM,
+    // then switches to the NEXT week's board to allow filling constraints in advance.
     let targetSun = new Date(now);
     targetSun.setHours(0, 0, 0, 0);
-    // Go to current week's Sunday
+    // Go to the Sunday of the current week
     targetSun.setDate(targetSun.getDate() - targetSun.getDay());
     
     // Switch to next week only from Wednesday 12:00 PM onwards
@@ -243,7 +244,9 @@ let rangeWeeks = 4;
 let today = startOfDay(getIsraelTime());
 
 let startDate;
-if (urlWeek) {
+// In Selection mode (regular editing), we always want the dynamic auto-reset date on load.
+// We only respect urlWeek for View-only mode or Hub mode which are more likely to be used with specific shared links.
+if (urlWeek && (isViewMode || isHubMode)) {
   startDate = startOfDay(new Date(urlWeek));
 } else {
   startDate = getAutoStartDate(isHubMode ? "hub" : (isViewMode ? "view" : "selection"));
@@ -979,13 +982,13 @@ async function loadGlobalSettings() {
     }
     
     // Fallbacks or per-room overrides - Only apply if not using auto-dates or specific week URL
-    if (urlWeek) {
-       // URL param always wins
+    if (urlWeek && (isViewMode || isHubMode)) {
+       // URL param wins for view/hub
     } else {
-       // In auto-mode, we ignore the saved startDate to allow the Wednesday reset to work.
-       // We only fallback to current calculation if for some reason it's invalid.
+       // In regular mode, we already set the dynamic startDate at the top of the file.
+       // We only re-calculate here if the startDate somehow became invalid.
        if (isNaN(startDate.getTime())) {
-          startDate = getAutoStartDate(isHubMode ? "hub" : "selection");
+          startDate = getAutoStartDate(isHubMode ? "hub" : (isViewMode ? "view" : "selection"));
        }
     }
     
