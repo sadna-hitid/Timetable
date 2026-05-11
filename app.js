@@ -277,7 +277,9 @@ let daysUnsub = null;
 const PALETTE_CLASSES = [
   'palette-red', 'palette-pink', 'palette-purple', 'palette-indigo', 
   'palette-blue', 'palette-cyan', 'palette-teal', 'palette-green', 
-  'palette-amber', 'palette-orange', 'palette-brown'
+  'palette-amber', 'palette-orange', 'palette-brown',
+  'palette-lime', 'palette-magenta', 'palette-slate', 'palette-olive',
+  'palette-coral', 'palette-mint'
 ];
 
 function stringHash(str) {
@@ -1072,6 +1074,7 @@ if (colorPickerSaveBtn) {
       staffColors[colorPickerTargetId] = selectedColorClass;
       updatePersonUI();
       refreshScheduleUI();
+      renderAdminRoomsList();
     } else if (colorPickerTargetType === 'room') {
       const idx = colorPickerTargetId;
       if (editingRooms[idx]) {
@@ -1081,6 +1084,7 @@ if (colorPickerSaveBtn) {
           const r = ROOMS.find(r => r.id === activeRoom);
           if (r) r.color = selectedColorClass;
         }
+        renderAdminRoomsList();
       }
     }
     colorPickerBackdrop.style.display = "none";

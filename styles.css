@@ -55,6 +55,14 @@
   --palette-amber-bg: #594300; --palette-amber-ink: #FFDF99;
   --palette-orange-bg: #7A2E00; --palette-orange-ink: #FFDBC9;
   --palette-brown-bg: #622818; --palette-brown-ink: #F6D8CE;
+  
+  /* Additional Distinguishable Colors */
+  --palette-lime-bg: #324C00; --palette-lime-ink: #C6EF86;
+  --palette-magenta-bg: #610052; --palette-magenta-ink: #FFD7F3;
+  --palette-slate-bg: #344855; --palette-slate-ink: #CDE6F7;
+  --palette-olive-bg: #484E29; --palette-olive-ink: #DFE5A8;
+  --palette-coral-bg: #7A2624; --palette-coral-ink: #FFDAD7;
+  --palette-mint-bg: #005141; --palette-mint-ink: #83F8D3;
 
   /* Aliasing original UI needs to M3 tokens */
   --bg: var(--md-sys-color-background);
@@ -157,6 +165,14 @@ html[data-theme="light"] {
   --palette-orange-bg: #FFDBC9; --palette-orange-ink: #331200;
   --palette-brown-bg: #F6D8CE; --palette-brown-ink: #381206;
 
+  /* Additional Distinguishable Colors */
+  --palette-lime-bg: #C6EF86; --palette-lime-ink: #142100;
+  --palette-magenta-bg: #FFD7F3; --palette-magenta-ink: #390030;
+  --palette-slate-bg: #CDE6F7; --palette-slate-ink: #001E2E;
+  --palette-olive-bg: #DFE5A8; --palette-olive-ink: #232808;
+  --palette-coral-bg: #FFDAD7; --palette-coral-ink: #410005;
+  --palette-mint-bg: #83F8D3; --palette-mint-ink: #002119;
+
   --elevation-1: 0px 1px 3px 1px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);
   --elevation-2: 0px 2px 6px 2px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);
   --elevation-3: 0px 4px 8px 3px rgba(0,0,0,0.05), 0px 1px 3px 0px rgba(0,0,0,0.1);
@@ -174,6 +190,12 @@ html[data-theme="light"] {
 .palette-amber { background: var(--palette-amber-bg) !important; color: var(--palette-amber-ink) !important; }
 .palette-orange { background: var(--palette-orange-bg) !important; color: var(--palette-orange-ink) !important; }
 .palette-brown { background: var(--palette-brown-bg) !important; color: var(--palette-brown-ink) !important; }
+.palette-lime { background: var(--palette-lime-bg) !important; color: var(--palette-lime-ink) !important; }
+.palette-magenta { background: var(--palette-magenta-bg) !important; color: var(--palette-magenta-ink) !important; }
+.palette-slate { background: var(--palette-slate-bg) !important; color: var(--palette-slate-ink) !important; }
+.palette-olive { background: var(--palette-olive-bg) !important; color: var(--palette-olive-ink) !important; }
+.palette-coral { background: var(--palette-coral-bg) !important; color: var(--palette-coral-ink) !important; }
+.palette-mint { background: var(--palette-mint-bg) !important; color: var(--palette-mint-ink) !important; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
