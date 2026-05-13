@@ -947,8 +947,9 @@ html[data-theme="light"] .loader-overlay {
 }
 
 .hub-day-row.special {
-  background: var(--bad-bg) !important;
-  color: var(--bad-ink) !important;
+  background: var(--md-sys-color-surface-container-low) !important;
+  color: var(--md-sys-color-on-surface-variant) !important;
+  opacity: 0.6;
 }
 
 .hub-day-row.special .hub-day-name,
