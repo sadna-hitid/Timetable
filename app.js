@@ -1282,11 +1282,11 @@ function renderHub() {
     const { assign } = pack;
     
     html += `
-      <div class="panel" style="flex: 1; min-width: 0; border: 1px solid var(--md-sys-color-outline-variant); padding:0; overflow:hidden;">
-        <div class="${getRoomColor(room)}" style="padding:12px; text-align: center;">
-          <h4 style="margin:0; font-size:17px; color:inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700;">${room.name}</h4>
+      <div class="panel hub-room-card">
+        <div class="hub-room-header ${getRoomColor(room)}">
+          <h4>${room.name}</h4>
         </div>
-        <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+        <div class="hub-room-body">
     `;
     
     for (let i = 0; i < 6; i++) {
@@ -1301,8 +1301,8 @@ function renderHub() {
       
       if (sh.specialType === "no_shifts") {
         html += `
-          <div style="${bgStyle}; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:700; width:45px; font-size:15px;">${hebDays[cur.getDay()]}</div>
+          <div class="hub-day-row" style="${bgStyle}">
+            <div class="hub-day-name">${hebDays[cur.getDay()]}</div>
             <div class="pill warn" style="font-size:13px; font-weight: 600;">${sh.label}</div>
           </div>
         `;
@@ -1310,10 +1310,10 @@ function renderHub() {
         const who = assign[key] || null;
         const colorCls = who ? getStaffColor(who) : '';
         html += `
-          <div style="${bgStyle}; border-radius:8px; padding:8px 6px; display:flex; justify-content:space-between; align-items:center; gap:4px;">
-            <div style="font-weight:700; width:30px; font-size:14px;">${hebDays[cur.getDay()]}</div>
-            <div style="font-size:13px; color:var(--md-sys-color-on-surface-variant); font-variant-numeric: tabular-nums; flex:1; text-align:center; font-weight: 500;">${sh.startTime || sh.label}</div>
-            <div class="${who ? `pill ${colorCls}` : 'pill bad'}" style="font-size:13px; min-width:65px; padding: 4px 2px; text-align:center; font-weight: 600;">${who ? who : '❌'}</div>
+          <div class="hub-day-row" style="${bgStyle}">
+            <div class="hub-day-name">${hebDays[cur.getDay()]}</div>
+            <div class="hub-day-time">${sh.startTime || sh.label}</div>
+            <div class="hub-day-who ${who ? `pill ${colorCls}` : 'pill bad'}">${who ? who : '❌'}</div>
           </div>
         `;
       }
