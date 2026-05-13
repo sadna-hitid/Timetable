@@ -402,6 +402,13 @@ function updatePersonUI() {
       updatePersonUI();
       renderCalendar();
     };
+
+    btn.ondblclick = (e) => {
+      const isMobile = window.matchMedia("(max-width: 800px)").matches;
+      if (isMobile) {
+        toggleExcludedUser(p);
+      }
+    };
   });
 }
 
