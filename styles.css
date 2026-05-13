@@ -915,6 +915,9 @@ html[data-theme="light"] .loader-overlay {
 .hub-room-header {
   padding: 12px;
   text-align: center;
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .hub-room-header h4 {
@@ -941,6 +944,16 @@ html[data-theme="light"] .loader-overlay {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.hub-day-row.special {
+  background: var(--bad-bg) !important;
+  color: var(--bad-ink) !important;
+}
+
+.hub-day-row.special .hub-day-name,
+.hub-day-row.special .hub-day-time {
+  color: inherit !important;
 }
 
 .hub-day-name {

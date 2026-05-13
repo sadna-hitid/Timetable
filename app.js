@@ -1283,7 +1283,7 @@ function renderHub() {
     
     html += `
       <div class="panel hub-room-card">
-        <div class="hub-room-header ${getRoomColor(room)}">
+        <div class="hub-room-header">
           <h4>${room.name}</h4>
         </div>
         <div class="hub-room-body">
@@ -1301,9 +1301,9 @@ function renderHub() {
       
       if (sh.specialType === "no_shifts") {
         html += `
-          <div class="hub-day-row" style="${bgStyle}">
+          <div class="hub-day-row special">
             <div class="hub-day-name">${hebDays[cur.getDay()]}</div>
-            <div class="pill warn" style="font-size:13px; font-weight: 600;">${sh.label}</div>
+            <div class="pill ok" style="font-size:13px; font-weight: 600; background:transparent; color:inherit;">${sh.label}</div>
           </div>
         `;
       } else {
