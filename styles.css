@@ -904,7 +904,7 @@ html[data-theme="light"] .loader-overlay {
 
 .hub-room-card {
   flex: 1;
-  min-width: 240px;
+  min-width: 0;
   border: 1px solid var(--md-sys-color-outline-variant);
   padding: 0;
   overflow: hidden;
@@ -975,7 +975,7 @@ html[data-theme="light"] .loader-overlay {
   
   #hubGrid {
     flex-direction: column;
-    gap: 20px;
+    gap: 32px;
   }
   
   .hub-room-card {
