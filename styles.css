@@ -305,8 +305,6 @@ body.view-only .schedule-panel {
 
 @media (max-width: 1100px) {
   .two { grid-template-columns: 1fr; grid-template-areas: "constraints" "schedule"; }
-  .constraints { position: static; }
-  .constraints .bd { max-height: none; overflow: visible; }
 }
 
 body.view-only .two { grid-template-columns: 1fr; grid-template-areas: "schedule"; }
@@ -510,6 +508,11 @@ button[disabled] { opacity: 0.38; cursor: not-allowed; box-shadow: none !importa
 
 .constraints { align-self: start; position: sticky; top: 92px; }
 .constraints .bd { max-height: calc(100vh - 132px); overflow: auto; padding-right: 8px;}
+
+@media (max-width: 1100px) {
+  .constraints { position: static; }
+  .constraints .bd { max-height: none; overflow: visible; }
+}
 
 /* Scrollbar M3 */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
