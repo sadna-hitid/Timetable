@@ -587,8 +587,13 @@ function computeSchedule() {
     const candidates = PEOPLE.filter(p => !excludedUsers.includes(p) && Number(row[p] ?? 0) < 2);
     // Algorithm Bypass logic
     if (isBypassMode) {
-       // In bypass mode, we ignore constraints and just pick based on total counts
-       candidates.sort((a, b) => totalCounts[a] - totalCounts[b]);
+       // In bypass mode, we ignore constraints and balance primarily by week
+       candidates.sort((a, b) => {
+         const wcA = weekCounts[wIdx][a];
+         const wcB = weekCounts[wIdx][b];
+         if (wcA !== wcB) return wcA - wcB;
+         return totalCounts[a] - totalCounts[b];
+       });
     } else {
       candidates.sort((a, b) => {
         // 1. Prioritize "Available" (0) over "Prefer Not" (1)
@@ -596,10 +601,20 @@ function computeSchedule() {
         const vB = Number(row[b] ?? 0);
         if (vA !== vB) return vA - vB;
 
-        // 2. Prioritize people with fewer shifts assigned so far in this range
+        // 2. Prioritize people with fewer shifts assigned so far in THIS WEEK
+        const wcA = weekCounts[wIdx][a];
+        const wcB = weekCounts[wIdx][b];
+        if (wcA !== wcB) return wcA - wcB;
+
+        // 3. For Fridays, prioritize people with fewer Fridays assigned so far
+        if (jsDow === 5) {
+          if (fridayCounts[a] !== fridayCounts[b]) return fridayCounts[a] - fridayCounts[b];
+        }
+
+        // 4. Tie-breaker: Person with fewer shifts assigned so far in the entire range
         if (totalCounts[a] !== totalCounts[b]) return totalCounts[a] - totalCounts[b];
 
-        // 3. Tie-breaker: Person with the fewest total available slots in the entire period
+        // 5. Final tie-breaker: Person with the fewest total available slots in the entire period
         return availabilityFrequency[a] - availabilityFrequency[b];
       });
     }
