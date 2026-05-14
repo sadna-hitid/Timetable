@@ -569,7 +569,9 @@ function computeSchedule() {
     const key = fmtDateKey(d);
     const row = state[key] || {};
     for (const p of PEOPLE) {
-      if (!excludedUsers.includes(p) && Number(row[p] ?? 0) < 2) weeklyFreq[wIdx][p]++;
+      // We only count "Perfectly Available" (v=0) days for this metric.
+      // This makes people with fewer v=0 options more "desperate" to take them.
+      if (!excludedUsers.includes(p) && Number(row[p] ?? 0) === 0) weeklyFreq[wIdx][p]++;
     }
   }
 
