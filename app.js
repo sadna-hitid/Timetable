@@ -604,16 +604,17 @@ function computeSchedule() {
         const wcB = weekCounts[wIdx][b];
         if (wcA !== wcB) return wcA - wcB;
 
-        // 2. Weekly Availability Frequency (LCR per week)
-        // Prioritize people who have FEWER options in this specific week
-        const fA = weeklyFreq[wIdx][a];
-        const fB = weeklyFreq[wIdx][b];
-        if (fA !== fB) return fA - fB;
-
-        // 3. Prioritize "Available" (0) over "Prefer Not" (1)
+        // 2. Prioritize "Available" (0) over "Prefer Not" (1)
         const vA = Number(row[a] ?? 0);
         const vB = Number(row[b] ?? 0);
         if (vA !== vB) return vA - vB;
+
+        // 3. Weekly Availability Frequency (LCR per week)
+        // Prioritize people who have FEWER options in this specific week (only counting v=0 days)
+        // This acts as a powerful tie-breaker when both are "Available"
+        const fA = weeklyFreq[wIdx][a];
+        const fB = weeklyFreq[wIdx][b];
+        if (fA !== fB) return fA - fB;
 
         // 4. For Fridays, prioritize people with fewer Fridays assigned so far
         if (jsDow === 5) {
