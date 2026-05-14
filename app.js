@@ -596,15 +596,16 @@ function computeSchedule() {
        });
     } else {
       candidates.sort((a, b) => {
-        // 1. Prioritize "Available" (0) over "Prefer Not" (1)
-        const vA = Number(row[a] ?? 0);
-        const vB = Number(row[b] ?? 0);
-        if (vA !== vB) return vA - vB;
-
-        // 2. Prioritize people with fewer shifts assigned so far in THIS WEEK
+        // 1. Prioritize people with fewer shifts assigned so far in THIS WEEK
+        // This ensures everyone gets balanced shifts even if some marked "Prefer Not" (v=1)
         const wcA = weekCounts[wIdx][a];
         const wcB = weekCounts[wIdx][b];
         if (wcA !== wcB) return wcA - wcB;
+
+        // 2. Prioritize "Available" (0) over "Prefer Not" (1) as a tie-breaker for the week
+        const vA = Number(row[a] ?? 0);
+        const vB = Number(row[b] ?? 0);
+        if (vA !== vB) return vA - vB;
 
         // 3. For Fridays, prioritize people with fewer Fridays assigned so far
         if (jsDow === 5) {
