@@ -559,16 +559,17 @@ function computeSchedule() {
   const weekCounts = []; // [ {נבו: 1, טל: 2}, ... ]
   const assign = {};
 
-  // Pre-calculate how many shifts each person *could* take in this range
-  // This helps us prioritize people with limited availability (Least Constrained Resource)
-  const availabilityFrequency = Object.fromEntries(PEOPLE.map(p => [p, 0]));
+  // Pre-calculate weekly availability frequency (Least Constrained Resource per week)
+  const weeklyFreq = []; // [ {נבו: 3, טל: 5}, ... ]
   for (const d of days) {
+    const wIdx = weekIndexFor(d);
+    if (!weeklyFreq[wIdx]) weeklyFreq[wIdx] = Object.fromEntries(PEOPLE.map(p => [p, 0]));
     const sh = shiftForDate(d);
     if (!sh || sh.specialType === "no_shifts") continue;
     const key = fmtDateKey(d);
     const row = state[key] || {};
     for (const p of PEOPLE) {
-      if (!excludedUsers.includes(p) && Number(row[p] ?? 0) < 2) availabilityFrequency[p]++;
+      if (!excludedUsers.includes(p) && Number(row[p] ?? 0) < 2) weeklyFreq[wIdx][p]++;
     }
   }
 
@@ -597,26 +598,28 @@ function computeSchedule() {
     } else {
       candidates.sort((a, b) => {
         // 1. Prioritize people with fewer shifts assigned so far in THIS WEEK
-        // This ensures everyone gets balanced shifts even if some marked "Prefer Not" (v=1)
         const wcA = weekCounts[wIdx][a];
         const wcB = weekCounts[wIdx][b];
         if (wcA !== wcB) return wcA - wcB;
 
-        // 2. Prioritize "Available" (0) over "Prefer Not" (1) as a tie-breaker for the week
+        // 2. Weekly Availability Frequency (LCR per week)
+        // Prioritize people who have FEWER options in this specific week
+        const fA = weeklyFreq[wIdx][a];
+        const fB = weeklyFreq[wIdx][b];
+        if (fA !== fB) return fA - fB;
+
+        // 3. Prioritize "Available" (0) over "Prefer Not" (1)
         const vA = Number(row[a] ?? 0);
         const vB = Number(row[b] ?? 0);
         if (vA !== vB) return vA - vB;
 
-        // 3. For Fridays, prioritize people with fewer Fridays assigned so far
+        // 4. For Fridays, prioritize people with fewer Fridays assigned so far
         if (jsDow === 5) {
           if (fridayCounts[a] !== fridayCounts[b]) return fridayCounts[a] - fridayCounts[b];
         }
 
-        // 4. Tie-breaker: Person with fewer shifts assigned so far in the entire range
-        if (totalCounts[a] !== totalCounts[b]) return totalCounts[a] - totalCounts[b];
-
-        // 5. Final tie-breaker: Person with the fewest total available slots in the entire period
-        return availabilityFrequency[a] - availabilityFrequency[b];
+        // 5. Final tie-breaker: Overall period counts
+        return totalCounts[a] - totalCounts[b];
       });
     }
 
