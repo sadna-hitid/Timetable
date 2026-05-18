@@ -152,26 +152,26 @@ html[data-theme="light"] {
   --md-sys-color-outline: #79747E;
   --md-sys-color-outline-variant: #CAC4D0;
 
-  /* Custom Palette for Staff and Rooms (Light Mode) */
-  --palette-red-bg: #FFDAD6; --palette-red-ink: #410002;
-  --palette-pink-bg: #FFD8E4; --palette-pink-ink: #31111D;
-  --palette-purple-bg: #EADDFF; --palette-purple-ink: #21005D;
-  --palette-indigo-bg: #E0E0FF; --palette-indigo-ink: #161559;
-  --palette-blue-bg: #D3E4FF; --palette-blue-ink: #001C38;
-  --palette-cyan-bg: #C3E8FF; --palette-cyan-ink: #001D32;
-  --palette-teal-bg: #85F8E2; --palette-teal-ink: #00201A;
-  --palette-green-bg: #B5F2A6; --palette-green-ink: #002106;
-  --palette-amber-bg: #FFDF99; --palette-amber-ink: #251A00;
-  --palette-orange-bg: #FFDBC9; --palette-orange-ink: #331200;
-  --palette-brown-bg: #F6D8CE; --palette-brown-ink: #381206;
+  /* Custom Palette for Staff and Rooms (Light Mode) - Expressive Strong Contrast */
+  --palette-red-bg: #B3261E; --palette-red-ink: #FFFFFF;
+  --palette-pink-bg: #C2185B; --palette-pink-ink: #FFFFFF;
+  --palette-purple-bg: #6750A4; --palette-purple-ink: #FFFFFF;
+  --palette-indigo-bg: #3F51B5; --palette-indigo-ink: #FFFFFF;
+  --palette-blue-bg: #0B57D0; --palette-blue-ink: #FFFFFF;
+  --palette-cyan-bg: #00838F; --palette-cyan-ink: #FFFFFF;
+  --palette-teal-bg: #006D5B; --palette-teal-ink: #FFFFFF;
+  --palette-green-bg: #146C2E; --palette-green-ink: #FFFFFF;
+  --palette-amber-bg: #F57C00; --palette-amber-ink: #FFFFFF;
+  --palette-orange-bg: #E65100; --palette-orange-ink: #FFFFFF;
+  --palette-brown-bg: #5D4037; --palette-brown-ink: #FFFFFF;
 
   /* Additional Distinguishable Colors */
-  --palette-lime-bg: #C6EF86; --palette-lime-ink: #142100;
-  --palette-magenta-bg: #FFD7F3; --palette-magenta-ink: #390030;
-  --palette-slate-bg: #CDE6F7; --palette-slate-ink: #001E2E;
-  --palette-olive-bg: #DFE5A8; --palette-olive-ink: #232808;
-  --palette-coral-bg: #FFDAD7; --palette-coral-ink: #410005;
-  --palette-mint-bg: #83F8D3; --palette-mint-ink: #002119;
+  --palette-lime-bg: #827717; --palette-lime-ink: #FFFFFF;
+  --palette-magenta-bg: #AD1457; --palette-magenta-ink: #FFFFFF;
+  --palette-slate-bg: #455A64; --palette-slate-ink: #FFFFFF;
+  --palette-olive-bg: #558B2F; --palette-olive-ink: #FFFFFF;
+  --palette-coral-bg: #D84315; --palette-coral-ink: #FFFFFF;
+  --palette-mint-bg: #00897B; --palette-mint-ink: #FFFFFF;
 
   --elevation-1: 0px 1px 3px 1px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);
   --elevation-2: 0px 2px 6px 2px rgba(0,0,0,0.05), 0px 1px 2px 0px rgba(0,0,0,0.1);

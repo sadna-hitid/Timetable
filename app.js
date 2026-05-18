@@ -556,14 +556,31 @@ function updateSundayLockUI() {
 }
 
 const sundayLockBtn = document.getElementById("sundayLockBtn");
+const unlockConfirmBackdrop = document.getElementById("unlockConfirmBackdrop");
+const unlockCancelBtn = document.getElementById("unlockCancelBtn");
+const unlockActionBtn = document.getElementById("unlockActionBtn");
+
 if (sundayLockBtn) {
   sundayLockBtn.addEventListener("click", () => {
-    if (confirm("האם אתה בטוח שברצונך לפתוח את לוח האילוצים? הלוח יישאר פתוח ל-24 שעות.")) {
-      const now = getIsraelTime();
-      const unlockTime = now.getTime() + 24 * 60 * 60 * 1000;
-      localStorage.setItem(`unlockedConstraints_${fmtDateKey(now)}`, unlockTime);
-      updateSundayLockUI();
-    }
+    if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "flex";
+  });
+}
+
+if (unlockCancelBtn) {
+  unlockCancelBtn.addEventListener("click", () => {
+    if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "none";
+  });
+}
+
+if (unlockActionBtn) {
+  unlockActionBtn.addEventListener("click", () => {
+    const now = getIsraelTime();
+    const weekSunday = startOfDay(startDate);
+    const unlockTime = now.getTime() + 24 * 60 * 60 * 1000;
+    // Set the key based on the week we are viewing, which matches isSundayLocked
+    localStorage.setItem(`unlockedConstraints_${fmtDateKey(weekSunday)}`, unlockTime);
+    updateSundayLockUI();
+    if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "none";
   });
 }
 
