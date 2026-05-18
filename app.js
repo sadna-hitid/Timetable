@@ -521,9 +521,13 @@ function renderCalendar() {
 // ----- Sunday Lock Logic -----
 function isSundayLocked() {
   const now = getIsraelTime();
-  if (now.getDay() !== 0) return false;
+  const weekSunday = startOfDay(startDate);
   
-  const unlockKey = `unlockedConstraints_${fmtDateKey(now)}`;
+  if (now.getTime() < weekSunday.getTime()) {
+    return false;
+  }
+  
+  const unlockKey = `unlockedConstraints_${fmtDateKey(weekSunday)}`;
   const unlockedUntil = localStorage.getItem(unlockKey);
   if (unlockedUntil && parseInt(unlockedUntil, 10) > now.getTime()) {
     return false;
