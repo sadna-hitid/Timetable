@@ -430,24 +430,39 @@ renderPeopleUI();
 whoamiEl.textContent = "אתה: " + activePerson;
 
 // ----- UI: Theme Toggle -----
-const savedTheme = localStorage.getItem("scheduler_theme") || "dark";
-document.documentElement.setAttribute("data-theme", savedTheme);
-renderThemeIcon();
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
-themeBtn.addEventListener("click", () => {
-  const current = document.documentElement.getAttribute("data-theme") || "dark";
-  const next = current === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("scheduler_theme", next);
-  renderThemeIcon();
+function getInitialTheme() {
+  const saved = localStorage.getItem("scheduler_theme");
+  if (saved) return saved;
+  return systemPrefersDark.matches ? "dark" : "light";
+}
+
+let currentTheme = getInitialTheme();
+document.documentElement.setAttribute("data-theme", currentTheme);
+
+systemPrefersDark.addEventListener('change', (e) => {
+  if (!localStorage.getItem("scheduler_theme")) {
+    currentTheme = e.matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", currentTheme);
+    renderThemeIcon();
+  }
 });
 
 function renderThemeIcon() {
-  const mode = document.documentElement.getAttribute("data-theme") || "dark";
-  themeIcon.innerHTML = mode === "dark"
+  themeIcon.innerHTML = currentTheme === "dark"
     ? `<path d="M12 3v2M12 19v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2M19 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><circle cx="12" cy="12" r="4"/>`
     : `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
 }
+
+renderThemeIcon();
+
+themeBtn.addEventListener("click", () => {
+  currentTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", currentTheme);
+  localStorage.setItem("scheduler_theme", currentTheme);
+  renderThemeIcon();
+});
 
 // ----- UI: Switch User (Identity) -----
 switchUserBtn.addEventListener("click", () => {

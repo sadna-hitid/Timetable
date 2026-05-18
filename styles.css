@@ -316,6 +316,7 @@ body.view-only .two { grid-template-columns: 1fr; grid-template-areas: "schedule
   border: 1px solid var(--md-sys-color-outline-variant);
   box-shadow: var(--elevation-1);
   overflow: hidden;
+  margin-bottom: 90px;
   transition: box-shadow var(--transition-m3), transform var(--transition-m3);
 }
 .panel:hover { box-shadow: var(--elevation-2); }
