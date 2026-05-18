@@ -515,6 +515,52 @@ function renderCalendar() {
       refreshScheduleUI(); // Instant local update
     });
   });
+  updateSundayLockUI();
+}
+
+// ----- Sunday Lock Logic -----
+function isSundayLocked() {
+  const now = getIsraelTime();
+  if (now.getDay() !== 0) return false;
+  
+  const unlockKey = `unlockedConstraints_${fmtDateKey(now)}`;
+  const unlockedUntil = localStorage.getItem(unlockKey);
+  if (unlockedUntil && parseInt(unlockedUntil, 10) > now.getTime()) {
+    return false;
+  }
+  return true;
+}
+
+function updateSundayLockUI() {
+  const isLocked = isSundayLocked();
+  const lockBtn = document.getElementById("sundayLockBtn");
+  const bd = mainConstraintsPanel.querySelector(".bd");
+  
+  if (isLocked) {
+    if (lockBtn) lockBtn.style.display = "flex";
+    if (bd) {
+      bd.style.opacity = "0.4";
+      bd.style.pointerEvents = "none";
+    }
+  } else {
+    if (lockBtn) lockBtn.style.display = "none";
+    if (bd) {
+      bd.style.opacity = "1";
+      bd.style.pointerEvents = "auto";
+    }
+  }
+}
+
+const sundayLockBtn = document.getElementById("sundayLockBtn");
+if (sundayLockBtn) {
+  sundayLockBtn.addEventListener("click", () => {
+    if (confirm("האם אתה בטוח שברצונך לפתוח את לוח האילוצים? הלוח יישאר פתוח ל-24 שעות.")) {
+      const now = getIsraelTime();
+      const unlockTime = now.getTime() + 24 * 60 * 60 * 1000;
+      localStorage.setItem(`unlockedConstraints_${fmtDateKey(now)}`, unlockTime);
+      updateSundayLockUI();
+    }
+  });
 }
 
 function refreshScheduleUI() {
@@ -975,9 +1021,31 @@ if (confirmResetActionBtn) {
   });
 }
 
+let adminClickCount = 0;
+let adminClickTimer;
 adminBtn.addEventListener("click", (e) => {
   const isExpanded = e.ctrlKey || e.metaKey;
+  if (isExpanded) {
+     clearTimeout(adminClickTimer);
+     adminClickCount = 0;
+     openAdminModal(true);
+     return;
+  }
   
+  adminClickCount++;
+  if (adminClickCount === 1) {
+    adminClickTimer = setTimeout(() => {
+      openAdminModal(false); 
+      adminClickCount = 0;
+    }, 300);
+  } else if (adminClickCount === 2) {
+    clearTimeout(adminClickTimer);
+    openAdminModal(true);
+    adminClickCount = 0;
+  }
+});
+
+function openAdminModal(isExpanded) {
   if (isExpanded) {
     if (adminTabSystemBtn) adminTabSystemBtn.style.display = "block";
     showAdminTab("system");
@@ -1012,7 +1080,7 @@ adminBtn.addEventListener("click", (e) => {
   renderAdminRoomsList();
   
   adminBackdrop.style.display = "flex";
-});
+}
 adminCancelBtn.addEventListener("click", () => { adminBackdrop.style.display = "none"; });
 
 adminSaveBtn.addEventListener("click", async () => {
@@ -1245,18 +1313,16 @@ END:VEVENT
   setTimeout(() => URL.revokeObjectURL(a.href), 300);
 }
 
-function copyViewOnlyLink() {
+function openViewOnlyLink() {
   const url = new URL(window.location.href);
   url.searchParams.set("view", "1");
   url.searchParams.set("week", fmtDateKey(startDate));
 
-  navigator.clipboard.writeText(url.toString()).then(() => {
-    alert("לינק לצפייה נקייה הועתק ללוח!");
-  });
+  window.open(url.toString(), "_blank");
 }
 
 
-viewOnlyBtn.addEventListener("click", copyViewOnlyLink);
+viewOnlyBtn.addEventListener("click", openViewOnlyLink);
 addCalendarBtn.addEventListener("click", downloadICSForMe);
 
 if (isHubMode) {
@@ -1286,6 +1352,20 @@ hubBtn.addEventListener("click", () => {
   }
   window.location.href = newUrl.toString();
 });
+
+const hubPrevWeekBtn = document.getElementById("hubPrevWeekBtn");
+if (hubPrevWeekBtn) {
+  hubPrevWeekBtn.addEventListener("click", () => {
+    const weekStart = new Date(startDate);
+    while (weekStart.getDay() !== 0) { weekStart.setTime(weekStart.getTime() - MS_DAY); }
+    const prevWeekStart = new Date(weekStart.getTime() - 7 * MS_DAY);
+    
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set("week", fmtDateKey(prevWeekStart));
+    newUrl.searchParams.set("view", "hub");
+    window.open(newUrl.toString(), "_blank");
+  });
+}
 
 function renderHub() {
   const weekStart = new Date(startDate);
