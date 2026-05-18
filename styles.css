@@ -126,12 +126,12 @@ html[data-theme="light"] {
 
   --md-sys-color-error: #B3261E;
   --md-sys-color-on-error: #FFFFFF;
-  --md-sys-color-error-container: #F9DEDC;
-  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-error-container: #FFC4C4;
+  --md-sys-color-on-error-container: #590000;
 
   --md-sys-color-warning: #825500;
-  --md-sys-color-warning-container: #FFDDAE;
-  --md-sys-color-on-warning-container: #291800;
+  --md-sys-color-warning-container: #FFE57F;
+  --md-sys-color-on-warning-container: #4D3300;
 
   --md-sys-color-success: #196C36;
   --md-sys-color-success-container: #9EF5B2;
@@ -300,8 +300,8 @@ body.view-only .schedule-panel {
   margin: 0 auto;
 }
 
-.constraints { grid-area: constraints; }
-.schedule-panel { grid-area: schedule; }
+.constraints { grid-area: constraints; margin-top: 0 !important; }
+.schedule-panel { grid-area: schedule; margin-top: 0 !important; }
 
 @media (max-width: 1100px) {
   .two { grid-template-columns: 1fr; grid-template-areas: "constraints" "schedule"; }

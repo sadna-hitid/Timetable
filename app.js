@@ -542,7 +542,7 @@ function isSundayLocked() {
     return false;
   }
   
-  const unlockKey = `unlockedConstraints_${fmtDateKey(weekSunday)}`;
+  const unlockKey = `unlockedConstraints_${activeRoom}_${fmtDateKey(weekSunday)}`;
   const unlockedUntil = localStorage.getItem(unlockKey);
   if (unlockedUntil && parseInt(unlockedUntil, 10) > now.getTime()) {
     return false;
@@ -555,15 +555,32 @@ function updateSundayLockUI() {
   const lockBtn = document.getElementById("sundayLockBtn");
   const bd = mainConstraintsPanel.querySelector(".bd");
   
-  if (isLocked) {
-    if (lockBtn) lockBtn.style.display = "flex";
-    if (bd) {
+  const now = getIsraelTime();
+  const weekSunday = startOfDay(startDate);
+  const inLockWindow = now.getTime() >= weekSunday.getTime();
+
+  if (lockBtn) {
+    if (inLockWindow) {
+      lockBtn.style.display = "flex";
+      if (isLocked) {
+        lockBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+        lockBtn.title = "לוח נעול (בחדר זה) - לחץ לפתיחה";
+        lockBtn.style.color = "inherit";
+      } else {
+        lockBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
+        lockBtn.title = "לוח פתוח זמנית (בחדר זה) - לחץ לנעילה מחודשת";
+        lockBtn.style.color = "var(--md-sys-color-primary)";
+      }
+    } else {
+      lockBtn.style.display = "none";
+    }
+  }
+
+  if (bd) {
+    if (isLocked) {
       bd.style.opacity = "0.4";
       bd.style.pointerEvents = "none";
-    }
-  } else {
-    if (lockBtn) lockBtn.style.display = "none";
-    if (bd) {
+    } else {
       bd.style.opacity = "1";
       bd.style.pointerEvents = "auto";
     }
@@ -577,7 +594,13 @@ const unlockActionBtn = document.getElementById("unlockActionBtn");
 
 if (sundayLockBtn) {
   sundayLockBtn.addEventListener("click", () => {
-    if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "flex";
+    if (isSundayLocked()) {
+      if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "flex";
+    } else {
+      const weekSunday = startOfDay(startDate);
+      localStorage.removeItem(`unlockedConstraints_${activeRoom}_${fmtDateKey(weekSunday)}`);
+      updateSundayLockUI();
+    }
   });
 }
 
@@ -592,8 +615,7 @@ if (unlockActionBtn) {
     const now = getIsraelTime();
     const weekSunday = startOfDay(startDate);
     const unlockTime = now.getTime() + 24 * 60 * 60 * 1000;
-    // Set the key based on the week we are viewing, which matches isSundayLocked
-    localStorage.setItem(`unlockedConstraints_${fmtDateKey(weekSunday)}`, unlockTime);
+    localStorage.setItem(`unlockedConstraints_${activeRoom}_${fmtDateKey(weekSunday)}`, unlockTime);
     updateSundayLockUI();
     if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "none";
   });
