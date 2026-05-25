@@ -645,30 +645,35 @@ html[data-theme="dark"] .toast .btn { color: #6750A4; } /* Primary */
 .shift-time-select {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--pill-bg);
-  color: var(--md-sys-color-on-secondary-container);
-  border: 1px solid var(--border);
+  background: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border: none;
   border-radius: 8px;
-  padding: 6px 24px 6px 12px;
+  padding: 6px 20px 6px 8px;
   font-size: 13px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  max-width: 100%;
+  width: auto;
+  min-width: 110px;
   text-align: center;
   transition: all var(--transition-m3-fast);
+  display: inline-block;
+  line-height: 1.2;
 }
 .shift-time-select:hover {
   background: var(--md-sys-color-surface-container-highest);
-  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-surface);
 }
 .shift-select-container::after {
   content: "▼";
   font-size: 8px;
   position: absolute;
-  right: 10px;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
-  color: var(--md-sys-color-on-secondary-container);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* Bottom Tabs Navigation */

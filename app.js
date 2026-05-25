@@ -737,9 +737,7 @@ function computeSchedule() {
       });
     }
 
-    // Manual Override check (room-specific)
-    const manualAssigns = row.manualAssigns || {};
-    const pick = manualAssigns[activeRoom] || candidates[0] || null;
+    const pick = candidates[0] || null;
 
     if (pick) {
       totalCounts[pick]++;
@@ -748,6 +746,52 @@ function computeSchedule() {
       assign[key] = pick;
     }
   }
+
+  // Apply manual overrides on top (Algorithm Bypass)
+  for (const d of days) {
+    const jsDow = d.getDay();
+    if (jsDow === 6) continue;
+    const sh = shiftForDate(d);
+    if (!sh || sh.specialType === "no_shifts") continue;
+
+    const key = fmtDateKey(d);
+    const row = state[key] || {};
+    const manualAssigns = row.manualAssigns || {};
+    const manualWho = manualAssigns[activeRoom];
+
+    if (manualWho) {
+      const oldWho = assign[key];
+      const wIdx = weekIndexFor(d);
+
+      if (oldWho && PEOPLE.includes(oldWho)) {
+        totalCounts[oldWho]--;
+        if (weekCounts[wIdx] && weekCounts[wIdx][oldWho] !== undefined) {
+          weekCounts[wIdx][oldWho]--;
+        }
+        if (jsDow === 5 && fridayCounts[oldWho] !== undefined) {
+          fridayCounts[oldWho]--;
+        }
+      }
+
+      if (PEOPLE.includes(manualWho)) {
+        if (totalCounts[manualWho] === undefined) totalCounts[manualWho] = 0;
+        totalCounts[manualWho]++;
+
+        if (weekCounts[wIdx]) {
+          if (weekCounts[wIdx][manualWho] === undefined) weekCounts[wIdx][manualWho] = 0;
+          weekCounts[wIdx][manualWho]++;
+        }
+
+        if (jsDow === 5) {
+          if (fridayCounts[manualWho] === undefined) fridayCounts[manualWho] = 0;
+          fridayCounts[manualWho]++;
+        }
+      }
+
+      assign[key] = manualWho;
+    }
+  }
+
   return { assign, weekCounts, fridayCounts };
 }
 
@@ -853,12 +897,13 @@ function renderSchedule(pack) {
         html += `
           <div class="slot ${cur.getDay() === 5 ? 'fri' : ''} ${isManualMode ? 'manual-clickable' : ''}" 
                ${isManualMode ? `onclick="handleManualAssign('${key}')"` : ''} 
+               data-key="${key}" data-who="${who || ''}"
                style="${isManualMode ? 'cursor:pointer; border:1px dashed var(--md-sys-color-primary);' : ''}">
             <div class="datebox">
                <div class="d-top">${hebDays[cur.getDay()]}</div>
                <div class="d-time">${fmtDM(cur)}</div>
             </div>
-            <div class="assignee-block" data-key="${key}" data-who="${who || ''}" style="width: 100%; display: flex; justify-content: center; cursor: pointer;" title="לחץ פעמיים להחלפת משמרת">
+            <div class="assignee-block" style="width: 100%; display: flex; justify-content: center;" title="לחץ פעמיים להחלפת משמרת">
               <div class="${who ? `pill ${colorCls}` : 'pill bad'}">${isManuallyAssigned ? '🔒 ' : ''}${who ? `משובץ: <b>${who}</b>` : '❌ אין משובץ'}</div>
             </div>
             ${shiftTimeHtml}
@@ -874,6 +919,7 @@ function renderSchedule(pack) {
 
   // Bind change listeners to shift time selects
   scheduleGrid.querySelectorAll(".shift-time-select").forEach(select => {
+    select.addEventListener("dblclick", (e) => e.stopPropagation());
     select.addEventListener("change", async (e) => {
       const dateKey = select.dataset.key;
       const newTime = e.target.value;
@@ -888,13 +934,21 @@ function renderSchedule(pack) {
     });
   });
 
-  // Bind double-click to assignee blocks for manual override swap
-  scheduleGrid.querySelectorAll(".assignee-block").forEach(block => {
+  // Bind double-click to slot cards for manual override swap
+  scheduleGrid.querySelectorAll(".slot").forEach(slot => {
     if (isViewMode) return;
-    block.addEventListener("dblclick", (e) => {
-      e.stopPropagation();
-      const dateKey = block.dataset.key;
-      const currentWho = block.dataset.who;
+    
+    // Ensure interactable items inside slot do not bubble double-clicks
+    slot.querySelectorAll("select, input, button").forEach(elem => {
+      elem.addEventListener("dblclick", (e) => e.stopPropagation());
+    });
+    
+    slot.addEventListener("dblclick", (e) => {
+      const block = slot.querySelector(".assignee-block");
+      if (!block || block.querySelector(".assign-select")) return;
+
+      const dateKey = slot.dataset.key;
+      const currentWho = slot.dataset.who;
       
       const select = document.createElement("select");
       select.className = "assign-select";
@@ -906,6 +960,8 @@ function renderSchedule(pack) {
       block.innerHTML = "";
       block.appendChild(select);
       select.focus();
+      
+      select.addEventListener("dblclick", (e) => e.stopPropagation());
       
       let saved = false;
       const handleSave = async () => {
@@ -1267,11 +1323,14 @@ adminSaveBtn.addEventListener("click", async () => {
     editingRooms[activeIdx].startDate = newDate;
     editingRooms[activeIdx].rangeWeeks = newRange;
 
-    const times = {};
-    document.querySelectorAll('.shift-time-input').forEach(sel => {
-      times[sel.dataset.day] = sel.value;
-    });
-    editingRooms[activeIdx].shiftTimes = times;
+    const shiftTimeInputs = document.querySelectorAll('.shift-time-input');
+    if (shiftTimeInputs.length > 0) {
+      const times = {};
+      shiftTimeInputs.forEach(sel => {
+        times[sel.dataset.day] = sel.value;
+      });
+      editingRooms[activeIdx].shiftTimes = times;
+    }
   }
 
   await setDoc(ref, { specialDays, rooms: editingRooms, staffColors }, { merge: true });
