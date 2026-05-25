@@ -1459,20 +1459,24 @@ async function loadGlobalSettings() {
     }
 
     // Auto-transition of 2-week (or multi-week) period once the first week has passed
-    if (!isViewMode && !isHubMode && currentRoomData && currentRoomData.startDate && currentRoomData.rangeWeeks && currentRoomData.rangeWeeks > 1) {
-      const dbStart = startOfDay(new Date(currentRoomData.startDate));
-      const nextWeekStart = new Date(dbStart.getTime() + 7 * MS_DAY);
-      if (today >= nextWeekStart) {
-        currentRoomData.startDate = fmtDateKey(nextWeekStart);
-        currentRoomData.rangeWeeks = currentRoomData.rangeWeeks - 1;
-        
-        // Save updated room configuration to DB
-        const refGlobal = doc(db, "settings", "global");
-        await setDoc(refGlobal, { rooms: ROOMS }, { merge: true });
-        
-        // Sync local variables
-        startDate = nextWeekStart;
+    try {
+      if (!isViewMode && !isHubMode && currentRoomData && currentRoomData.startDate && currentRoomData.rangeWeeks && currentRoomData.rangeWeeks > 1) {
+        const dbStart = startOfDay(new Date(currentRoomData.startDate));
+        const nextWeekStart = new Date(dbStart.getTime() + 7 * MS_DAY);
+        if (today >= nextWeekStart) {
+          currentRoomData.startDate = fmtDateKey(nextWeekStart);
+          currentRoomData.rangeWeeks = currentRoomData.rangeWeeks - 1;
+          
+          // Save updated room configuration to DB
+          const refGlobal = doc(db, "settings", "global");
+          await setDoc(refGlobal, { rooms: ROOMS }, { merge: true });
+          
+          // Sync local variables
+          startDate = nextWeekStart;
+        }
       }
+    } catch (err) {
+      console.error("Auto-transition error bypassed safely:", err);
     }
     
     if (currentRoomData && currentRoomData.rangeWeeks) {
