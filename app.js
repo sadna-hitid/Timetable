@@ -88,6 +88,9 @@ const identitySelect = document.getElementById("identitySelect");
 const identityStartBtn = document.getElementById("identityStartBtn");
 const viewOnlyBtn = document.getElementById("viewOnlyBtn");
 const addCalendarBtn = document.getElementById("addCalendarBtn");
+const helpBtn = document.getElementById("helpBtn");
+const helpBackdrop = document.getElementById("helpBackdrop");
+const helpCloseBtn = document.getElementById("helpCloseBtn");
 
 const hubBtn = document.getElementById("hubBtn");
 const hubView = document.getElementById("hubView");
@@ -399,10 +402,6 @@ function updatePersonUI() {
     }
 
     btn.onclick = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        toggleExcludedUser(p);
-        return;
-      }
       activePerson = p;
       localStorage.setItem(`scheduler_person_${activeRoom}`, activePerson);
       whoamiEl.textContent = "אתה: " + activePerson;
@@ -411,10 +410,7 @@ function updatePersonUI() {
     };
 
     btn.ondblclick = (e) => {
-      const isMobile = window.matchMedia("(max-width: 800px)").matches;
-      if (isMobile) {
-        toggleExcludedUser(p);
-      }
+      toggleExcludedUser(p);
     };
   });
 }
@@ -629,6 +625,25 @@ if (unlockActionBtn) {
     if (unlockConfirmBackdrop) unlockConfirmBackdrop.style.display = "none";
   });
 }
+
+if (helpBtn) {
+  helpBtn.addEventListener("click", () => {
+    if (helpBackdrop) helpBackdrop.style.display = "flex";
+  });
+}
+if (helpCloseBtn) {
+  helpCloseBtn.addEventListener("click", () => {
+    if (helpBackdrop) helpBackdrop.style.display = "none";
+  });
+}
+if (helpBackdrop) {
+  helpBackdrop.addEventListener("click", (e) => {
+    if (e.target === helpBackdrop) {
+      helpBackdrop.style.display = "none";
+    }
+  });
+}
+
 
 function refreshScheduleUI() {
   const pack = computeSchedule();
