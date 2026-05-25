@@ -472,13 +472,15 @@ themeBtn.addEventListener("click", () => {
 });
 
 // ----- UI: Switch User (Identity) -----
-switchUserBtn.addEventListener("click", () => {
-  const roomObj = ROOMS.find(r => r.id === activeRoom) || ROOMS[0];
-  const titleEl = document.getElementById("identityModalTitle");
-  if (titleEl) titleEl.textContent = `מי אתה? (${roomObj ? roomObj.name : 'חדר'})`;
-  identitySelect.value = activePerson;
-  identityBackdrop.style.display = "flex";
-});
+if (switchUserBtn) {
+  switchUserBtn.addEventListener("click", () => {
+    const roomObj = ROOMS.find(r => r.id === activeRoom) || ROOMS[0];
+    const titleEl = document.getElementById("identityModalTitle");
+    if (titleEl) titleEl.textContent = `מי אתה? (${roomObj ? roomObj.name : 'חדר'})`;
+    identitySelect.value = activePerson;
+    identityBackdrop.style.display = "flex";
+  });
+}
 identityStartBtn.addEventListener("click", () => {
   activePerson = identitySelect.value;
   localStorage.setItem(`scheduler_person_${activeRoom}`, activePerson);
