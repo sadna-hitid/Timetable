@@ -331,17 +331,24 @@ function shiftForDate(d, customRoom = null) {
 
   if (jsDow === 6) return null; // Saturday
 
-  if (targetRoom && targetRoom.shiftTimes && targetRoom.shiftTimes[jsDow]) {
-    const startStr = targetRoom.shiftTimes[jsDow];
-    const [h, m] = startStr.split(':').map(Number);
-    const endH = (h + 6) % 24;
-    const endStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    baseLabel = `${startStr}–${endStr}`;
-  } else {
-    if (jsDow >= 0 && jsDow <= 4) baseLabel = "16:00–22:00";
-    else if (jsDow === 5) baseLabel = "08:00–14:00";
-    else return null;
+  const dayData = state[key] || {};
+  const customShiftTimes = dayData.customShiftTimes || {};
+  let startStr = customShiftTimes[targetRoom.id];
+
+  if (!startStr) {
+    if (targetRoom && targetRoom.shiftTimes && targetRoom.shiftTimes[jsDow]) {
+      startStr = targetRoom.shiftTimes[jsDow];
+    } else {
+      if (jsDow >= 0 && jsDow <= 4) startStr = "16:00";
+      else if (jsDow === 5) startStr = "08:00";
+      else return null;
+    }
   }
+
+  const [h, m] = startStr.split(':').map(Number);
+  const endH = (h + 6) % 24;
+  const endStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  baseLabel = `${startStr}–${endStr}`;
 
   if (special && special.type === "close_early") {
     return { label: `${special.title} (סוגרים מוקדם)`, specialType: "close_early", originalHours: baseLabel };
@@ -820,6 +827,29 @@ function renderSchedule(pack) {
         const prefer = PEOPLE.filter(p => Number(row[p] ?? 0) === 1);
 
         const colorCls = who ? getStaffColor(who) : '';
+
+        let shiftTimeHtml = "";
+        if (isViewMode) {
+          shiftTimeHtml = `<div class="pill ${sh.specialType ? 'wrap' : ''}">${sh.label}</div>`;
+        } else {
+          const isFriday = cur.getDay() === 5;
+          const opts = isFriday ? ["08:00", "08:30", "09:00"] : ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
+          const currentStart = sh.startTime || (isFriday ? "08:00" : "16:00");
+          
+          shiftTimeHtml = `
+            <div class="shift-select-container">
+              <select class="shift-time-select" data-key="${key}">
+                ${opts.map(opt => {
+                  const [h, m] = opt.split(':').map(Number);
+                  const endH = (h + 6) % 24;
+                  const endStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                  return `<option value="${opt}" ${opt === currentStart ? 'selected' : ''}>${opt}–${endStr}</option>`;
+                }).join("")}
+              </select>
+            </div>
+          `;
+        }
+
         html += `
           <div class="slot ${cur.getDay() === 5 ? 'fri' : ''} ${isManualMode ? 'manual-clickable' : ''}" 
                ${isManualMode ? `onclick="handleManualAssign('${key}')"` : ''} 
@@ -828,8 +858,10 @@ function renderSchedule(pack) {
                <div class="d-top">${hebDays[cur.getDay()]}</div>
                <div class="d-time">${fmtDM(cur)}</div>
             </div>
-            <div class="${who ? `pill ${colorCls}` : 'pill bad'}">${isManuallyAssigned ? '🔒 ' : ''}${who ? `משובץ: <b>${who}</b>` : '❌ אין משובץ'}</div>
-            <div class="pill ${sh.specialType ? 'wrap' : ''}">${sh.label}</div>
+            <div class="assignee-block" data-key="${key}" data-who="${who || ''}" style="width: 100%; display: flex; justify-content: center; cursor: pointer;" title="לחץ פעמיים להחלפת משמרת">
+              <div class="${who ? `pill ${colorCls}` : 'pill bad'}">${isManuallyAssigned ? '🔒 ' : ''}${who ? `משובץ: <b>${who}</b>` : '❌ אין משובץ'}</div>
+            </div>
+            ${shiftTimeHtml}
             ${prefer.length ? `<div class="pill warn" style="font-size:11px">${prefer.join(", ")}</div>` : ``}
             ${absent.length ? `<div class="pill bad" style="font-size:11px">${absent.join(", ")}</div>` : ``}
           </div>
@@ -839,6 +871,71 @@ function renderSchedule(pack) {
     weekStart = new Date(weekStart.getTime() + 7 * MS_DAY);
   }
   scheduleGrid.innerHTML = html;
+
+  // Bind change listeners to shift time selects
+  scheduleGrid.querySelectorAll(".shift-time-select").forEach(select => {
+    select.addEventListener("change", async (e) => {
+      const dateKey = select.dataset.key;
+      const newTime = e.target.value;
+      
+      if (!state[dateKey]) state[dateKey] = {};
+      if (!state[dateKey].customShiftTimes) state[dateKey].customShiftTimes = {};
+      state[dateKey].customShiftTimes[activeRoom] = newTime;
+      
+      await saveConstraint(dateKey, state[dateKey]);
+      renderCalendar();
+      refreshScheduleUI();
+    });
+  });
+
+  // Bind double-click to assignee blocks for manual override swap
+  scheduleGrid.querySelectorAll(".assignee-block").forEach(block => {
+    if (isViewMode) return;
+    block.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      const dateKey = block.dataset.key;
+      const currentWho = block.dataset.who;
+      
+      const select = document.createElement("select");
+      select.className = "assign-select";
+      select.innerHTML = `
+        <option value="">(אוטומטי)</option>
+        ${PEOPLE.map(p => `<option value="${p}" ${p === currentWho ? 'selected' : ''}>${p}</option>`).join("")}
+      `;
+      
+      block.innerHTML = "";
+      block.appendChild(select);
+      select.focus();
+      
+      let saved = false;
+      const handleSave = async () => {
+        if (saved) return;
+        saved = true;
+        
+        const newAssignee = select.value;
+        if (!state[dateKey]) state[dateKey] = {};
+        if (!state[dateKey].manualAssigns) state[dateKey].manualAssigns = {};
+        
+        if (newAssignee === "") {
+          delete state[dateKey].manualAssigns[activeRoom];
+        } else {
+          state[dateKey].manualAssigns[activeRoom] = newAssignee;
+        }
+        
+        await saveConstraint(dateKey, state[dateKey]);
+        refreshScheduleUI();
+      };
+      
+      select.addEventListener("change", handleSave);
+      select.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (!saved) {
+            refreshScheduleUI();
+          }
+        }, 150);
+      });
+    });
+  });
 }
 
 // ----- Event Listeners -----
@@ -1277,11 +1374,29 @@ async function loadGlobalSettings() {
     if (urlWeek && (isViewMode || isHubMode)) {
        // URL param wins for view/hub
     } else {
-       // In regular mode, we already set the dynamic startDate at the top of the file.
-       // We only re-calculate here if the startDate somehow became invalid.
+       if (currentRoomData && currentRoomData.startDate) {
+          startDate = startOfDay(new Date(currentRoomData.startDate));
+       }
        if (isNaN(startDate.getTime())) {
           startDate = getAutoStartDate(isHubMode ? "hub" : (isViewMode ? "view" : "selection"));
        }
+    }
+
+    // Auto-transition of 2-week (or multi-week) period once the first week has passed
+    if (!isViewMode && !isHubMode && currentRoomData && currentRoomData.startDate && currentRoomData.rangeWeeks && currentRoomData.rangeWeeks > 1) {
+      const dbStart = startOfDay(new Date(currentRoomData.startDate));
+      const nextWeekStart = new Date(dbStart.getTime() + 7 * MS_DAY);
+      if (today >= nextWeekStart) {
+        currentRoomData.startDate = fmtDateKey(nextWeekStart);
+        currentRoomData.rangeWeeks = currentRoomData.rangeWeeks - 1;
+        
+        // Save updated room configuration to DB
+        const refGlobal = doc(db, "settings", "global");
+        await setDoc(refGlobal, { rooms: ROOMS }, { merge: true });
+        
+        // Sync local variables
+        startDate = nextWeekStart;
+      }
     }
     
     if (currentRoomData && currentRoomData.rangeWeeks) {
