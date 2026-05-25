@@ -286,6 +286,7 @@ const PALETTE_CLASSES = [
 ];
 
 function stringHash(str) {
+  if (!str) return 0;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -294,6 +295,7 @@ function stringHash(str) {
 }
 
 function getStaffColor(personName) {
+  if (!personName) return 'palette-slate';
   if (staffColors[personName]) return staffColors[personName];
   const idx = stringHash(personName) % PALETTE_CLASSES.length;
   return PALETTE_CLASSES[idx];
@@ -384,7 +386,7 @@ async function toggleExcludedUser(p) {
 }
 
 function updatePersonUI() {
-  document.querySelectorAll(".chip").forEach(btn => {
+  document.querySelectorAll("#peopleChipsContainer .chip").forEach(btn => {
     const p = btn.dataset.person;
     btn.classList.toggle("active", p === activePerson);
     
