@@ -319,6 +319,7 @@ body.view-only .two { grid-template-columns: 1fr; grid-template-areas: "schedule
   margin-bottom: 90px;
   transition: box-shadow var(--transition-m3), transform var(--transition-m3);
 }
+.panel .panel { margin-bottom: 0; }
 .panel:hover { box-shadow: var(--elevation-2); }
 
 .panel .hd { 
