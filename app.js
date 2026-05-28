@@ -1575,7 +1575,7 @@ async function loadGlobalSettings() {
     if (!isViewMode && !isHubMode) {
       const lastSeen = localStorage.getItem(`lastSeenStartDate_${activeRoom}`);
       const currentStartStr = fmtDateKey(startDate);
-      if (lastSeen && lastSeen !== currentStartStr) {
+      if (lastSeen !== currentStartStr) {
         if (resetNotificationBackdrop) resetNotificationBackdrop.style.display = "flex";
       }
       localStorage.setItem(`lastSeenStartDate_${activeRoom}`, currentStartStr);
