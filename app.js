@@ -43,15 +43,15 @@ function getAutoStartDate(mode) {
     }
     return hubSun;
   } else {
-    // Selection panel (regular mode) displays current week until Wednesday 12:00 PM,
+    // Selection panel (regular mode) displays current week until Thursday 12:00 PM,
     // then switches to the NEXT week's board to allow filling constraints in advance.
     let targetSun = new Date(now);
     targetSun.setHours(0, 0, 0, 0);
     // Go to the Sunday of the current week
     targetSun.setDate(targetSun.getDate() - targetSun.getDay());
     
-    // Switch to next week only from Wednesday 12:00 PM onwards
-    if ((day === 3 && hour >= 12) || day > 3) {
+    // Switch to next week only from Thursday 12:00 PM onwards
+    if ((day === 4 && hour >= 12) || day > 4) {
       targetSun.setDate(targetSun.getDate() + 7);
     }
     return targetSun;
@@ -1505,7 +1505,7 @@ async function loadGlobalSettings() {
        }
     }
 
-    // Auto-transition of rooms once Wednesday 12:00 PM of the start week has passed
+    // Auto-transition of rooms once Thursday 12:00 PM of the start week has passed
     try {
       if (!isViewMode && !isHubMode) {
         let anyChanged = false;
@@ -1514,13 +1514,13 @@ async function loadGlobalSettings() {
         for (const r of ROOMS) {
           if (r.startDate) {
             let rStart = startOfDay(new Date(r.startDate));
-            // Wednesday 12:00 PM of the week starting at rStart
-            let transitionTime = new Date(rStart.getTime() + 3 * MS_DAY + 12 * 60 * 60 * 1000);
+            // Thursday 12:00 PM of the week starting at rStart
+            let transitionTime = new Date(rStart.getTime() + 4 * MS_DAY + 12 * 60 * 60 * 1000);
             
             while (nowIsrael >= transitionTime) {
               rStart = new Date(rStart.getTime() + 7 * MS_DAY);
               r.startDate = fmtDateKey(rStart);
-              transitionTime = new Date(rStart.getTime() + 3 * MS_DAY + 12 * 60 * 60 * 1000);
+              transitionTime = new Date(rStart.getTime() + 4 * MS_DAY + 12 * 60 * 60 * 1000);
               anyChanged = true;
             }
           }
