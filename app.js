@@ -93,6 +93,8 @@ const helpBackdrop = document.getElementById("helpBackdrop");
 const helpCloseBtn = document.getElementById("helpCloseBtn");
 const welcomeBackdrop = document.getElementById("welcomeBackdrop");
 const welcomeCloseBtn = document.getElementById("welcomeCloseBtn");
+const resetNotificationBackdrop = document.getElementById("resetNotificationBackdrop");
+const resetNotificationCloseBtn = document.getElementById("resetNotificationCloseBtn");
 
 const hubBtn = document.getElementById("hubBtn");
 const hubView = document.getElementById("hubView");
@@ -242,6 +244,19 @@ let isHubMode = urlParams.get("view") === "hub";
 const isViewMode = urlParams.get("view") === "1";
 if (isViewMode) {
   document.body.classList.add("view-only");
+  const viewPrevWeekBtn = document.getElementById("viewPrevWeekBtn");
+  if (viewPrevWeekBtn) {
+    viewPrevWeekBtn.style.display = "inline-block";
+    viewPrevWeekBtn.addEventListener("click", () => {
+      const weekStart = new Date(startDate);
+      while (weekStart.getDay() !== 0) { weekStart.setTime(weekStart.getTime() - MS_DAY); }
+      const prevWeekStart = new Date(weekStart.getTime() - 7 * MS_DAY);
+      
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set("week", fmtDateKey(prevWeekStart));
+      window.location.href = newUrl.toString();
+    });
+  }
 }
 
 let activePerson = localStorage.getItem(`scheduler_person_${activeRoom}`) || PEOPLE[0];
@@ -659,6 +674,19 @@ if (welcomeBackdrop) {
     if (e.target === welcomeBackdrop) {
       welcomeBackdrop.style.display = "none";
       localStorage.setItem("scheduler_welcome_whatsnew_v1.3", "true");
+    }
+  });
+}
+
+if (resetNotificationCloseBtn) {
+  resetNotificationCloseBtn.addEventListener("click", () => {
+    if (resetNotificationBackdrop) resetNotificationBackdrop.style.display = "none";
+  });
+}
+if (resetNotificationBackdrop) {
+  resetNotificationBackdrop.addEventListener("click", (e) => {
+    if (e.target === resetNotificationBackdrop) {
+      resetNotificationBackdrop.style.display = "none";
     }
   });
 }
@@ -1477,21 +1505,36 @@ async function loadGlobalSettings() {
        }
     }
 
-    // Auto-transition of 2-week (or multi-week) period once the first week has passed
+    // Auto-transition of rooms once Wednesday 12:00 PM of the start week has passed
     try {
-      if (!isViewMode && !isHubMode && currentRoomData && currentRoomData.startDate && currentRoomData.rangeWeeks && currentRoomData.rangeWeeks > 1) {
-        const dbStart = startOfDay(new Date(currentRoomData.startDate));
-        const nextWeekStart = new Date(dbStart.getTime() + 7 * MS_DAY);
-        if (today >= nextWeekStart) {
-          currentRoomData.startDate = fmtDateKey(nextWeekStart);
-          currentRoomData.rangeWeeks = currentRoomData.rangeWeeks - 1;
-          
-          // Save updated room configuration to DB
+      if (!isViewMode && !isHubMode) {
+        let anyChanged = false;
+        const nowIsrael = getIsraelTime();
+        
+        for (const r of ROOMS) {
+          if (r.startDate) {
+            let rStart = startOfDay(new Date(r.startDate));
+            // Wednesday 12:00 PM of the week starting at rStart
+            let transitionTime = new Date(rStart.getTime() + 3 * MS_DAY + 12 * 60 * 60 * 1000);
+            
+            while (nowIsrael >= transitionTime) {
+              rStart = new Date(rStart.getTime() + 7 * MS_DAY);
+              r.startDate = fmtDateKey(rStart);
+              transitionTime = new Date(rStart.getTime() + 3 * MS_DAY + 12 * 60 * 60 * 1000);
+              anyChanged = true;
+            }
+          }
+        }
+        
+        if (anyChanged) {
+          // Save updated rooms configuration to DB
           const refGlobal = doc(db, "settings", "global");
           await setDoc(refGlobal, { rooms: ROOMS }, { merge: true });
           
-          // Sync local variables
-          startDate = nextWeekStart;
+          // Re-sync local variable for active room since it might have changed
+          if (currentRoomData && currentRoomData.startDate) {
+            startDate = startOfDay(new Date(currentRoomData.startDate));
+          }
         }
       }
     } catch (err) {
@@ -1527,6 +1570,16 @@ async function loadGlobalSettings() {
     endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY)); // Approx
     monthKey = monthKeyFrom(startDate);
     renderPeopleUI();
+
+    // Reset Notification Trigger
+    if (!isViewMode && !isHubMode) {
+      const lastSeen = localStorage.getItem(`lastSeenStartDate_${activeRoom}`);
+      const currentStartStr = fmtDateKey(startDate);
+      if (lastSeen && lastSeen !== currentStartStr) {
+        if (resetNotificationBackdrop) resetNotificationBackdrop.style.display = "flex";
+      }
+      localStorage.setItem(`lastSeenStartDate_${activeRoom}`, currentStartStr);
+    }
   }
 }
 

@@ -57,6 +57,7 @@
           <h3 style="margin-inline-end:12px">לוח שיבוצים</h3>
           <span id="dateRangeBadge" class="badge" style="margin-inline-end:auto"></span>
 
+          <button id="viewPrevWeekBtn" class="ghost" style="display:none;" title="שבוע קודם">שבוע קודם</button>
           <button id="viewOnlyBtn" class="ghost" title="צפייה נקייה">צפייה</button>
           <button id="addCalendarBtn" class="ghost" title="הוסף ליומן">
             <span style="display:inline-flex;gap:8px;align-items:center">
@@ -436,7 +437,21 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.4.1</div>
+  <div class="version-tag">v1.4.3</div>
+
+  <!-- Reset Notification Modal -->
+  <div id="resetNotificationBackdrop" class="modal-backdrop">
+    <div class="modal" style="width: min(450px, 92vw); text-align: center; border: 2px solid var(--md-sys-color-primary); padding: 32px;">
+      <div style="font-size: 48px; margin-bottom: 12px; animation: bounce 2s infinite;">📅</div>
+      <h2 style="margin: 0 0 12px 0; color: var(--md-sys-color-primary); font-size: 24px;">הטבלה אופסה ועברה לשבוע הבא!</h2>
+      <p style="margin-bottom: 24px; font-size: 15px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+        הטבלה של חדר זה אופסה באופן אוטומטי ועברה לשבוע הבא כדי שתוכלו להירשם ולהזין אילוצים חדשים בזמן.
+      </p>
+      <div class="actions" style="justify-content: center; margin-top: 0;">
+        <button id="resetNotificationCloseBtn" type="button" class="primary" style="padding: 12px 36px; border-radius: 9999px; font-size: 16px;">הבנתי, תודה!</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
