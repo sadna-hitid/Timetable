@@ -34,11 +34,11 @@ function getAutoStartDate(mode) {
   const hour = now.getHours();
 
   if (mode === "hub" || mode === "view") {
-    // Hub and View Only display current week until Saturday 08:00 AM (end of the work week)
+    // Hub and View Only display current week until Saturday 07:00 PM (end of the work week)
     let hubSun = new Date(now);
     hubSun.setHours(0, 0, 0, 0);
     hubSun.setDate(hubSun.getDate() - hubSun.getDay());
-    if (day === 6 && hour >= 8) {
+    if (day === 6 && hour >= 19) {
       hubSun.setDate(hubSun.getDate() + 7);
     }
     return hubSun;
@@ -1496,12 +1496,15 @@ async function loadGlobalSettings() {
     // Fallbacks or per-room overrides - Only apply if not using auto-dates or specific week URL
     if (urlWeek && (isViewMode || isHubMode)) {
        // URL param wins for view/hub
+    } else if (isHubMode || isViewMode) {
+       // Hub and View modes always use dynamic calculations based on current time
+       startDate = getAutoStartDate(isHubMode ? "hub" : "view");
     } else {
        if (currentRoomData && currentRoomData.startDate) {
           startDate = startOfDay(new Date(currentRoomData.startDate));
        }
        if (isNaN(startDate.getTime())) {
-          startDate = getAutoStartDate(isHubMode ? "hub" : (isViewMode ? "view" : "selection"));
+          startDate = getAutoStartDate("selection");
        }
     }
 

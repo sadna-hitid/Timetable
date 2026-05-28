@@ -534,6 +534,9 @@ button[disabled] { opacity: 0.38; cursor: not-allowed; box-shadow: none !importa
 
 .modal {
   width: min(480px, 92vw); 
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
   background: var(--md-sys-color-surface-container-high); 
   border-radius: 28px; 
   padding: 32px;
@@ -1053,5 +1056,12 @@ html[data-theme="light"] .loader-overlay {
     min-width: 85px;
     font-size: 14px;
     padding: 6px 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal {
+    padding: 20px 16px;
+    border-radius: 20px;
   }
 }
