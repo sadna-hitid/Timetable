@@ -683,14 +683,14 @@ if (helpBackdrop) {
 if (welcomeCloseBtn) {
   welcomeCloseBtn.addEventListener("click", () => {
     if (welcomeBackdrop) welcomeBackdrop.style.display = "none";
-    localStorage.setItem("scheduler_welcome_whatsnew_v1.3", "true");
+    localStorage.setItem("scheduler_welcome_whatsnew_v1.5", "true");
   });
 }
 if (welcomeBackdrop) {
   welcomeBackdrop.addEventListener("click", (e) => {
     if (e.target === welcomeBackdrop) {
       welcomeBackdrop.style.display = "none";
-      localStorage.setItem("scheduler_welcome_whatsnew_v1.3", "true");
+      localStorage.setItem("scheduler_welcome_whatsnew_v1.5", "true");
     }
   });
 }
@@ -1839,7 +1839,7 @@ onAuthStateChanged(auth, async (user) => {
     
     setTimeout(() => {
       hideLoader();
-      const welcomeSeen = localStorage.getItem("scheduler_welcome_whatsnew_v1.3");
+      const welcomeSeen = localStorage.getItem("scheduler_welcome_whatsnew_v1.5");
       if (!welcomeSeen && !isViewMode && !isHubMode) {
         if (welcomeBackdrop) welcomeBackdrop.style.display = "flex";
       }
