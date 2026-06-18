@@ -22,6 +22,66 @@ const db = getFirestore(app);
 let PEOPLE = ["עובד 1", "עובד 2", "עובד 3"];
 const MS_DAY = 86400000;
 
+const WEEKDAY_SHIFT_OPTIONS = [
+  { value: "14:30-22:00", label: "14:30–22:00" },
+  { value: "15:00-22:00", label: "15:00–22:00" },
+  { value: "15:30-22:00", label: "15:30–22:00" },
+  { value: "16:00-22:00", label: "16:00–22:00" },
+  { value: "16:30-22:00", label: "16:30–22:00" },
+  { value: "17:00-22:00", label: "17:00–22:00" },
+  { value: "", label: "—————————", disabled: true },
+  { value: "08:00-14:00", label: "08:00–14:00" },
+  { value: "08:30-14:00", label: "08:30–14:00" },
+  { value: "09:00-14:00", label: "09:00–14:00" },
+  { value: "08:00-16:00", label: "08:00–16:00" },
+  { value: "08:30-16:00", label: "08:30–16:00" },
+  { value: "09:00-16:00", label: "09:00–16:00" }
+];
+
+const FRIDAY_SHIFT_OPTIONS = [
+  { value: "08:00-14:00", label: "08:00–14:00" },
+  { value: "08:30-14:00", label: "08:30–14:00" },
+  { value: "09:00-14:00", label: "09:00–14:00" }
+];
+
+function getShiftLabelAndStart(val, jsDow) {
+  if (!val) {
+    val = jsDow === 5 ? "08:00" : "16:00";
+  }
+
+  val = val.trim();
+
+  if (val.includes('-') || val.includes('–')) {
+    const parts = val.split(/[-–]/);
+    const start = parts[0].trim();
+    const end = parts[1].trim();
+    return {
+      label: `${start}–${end}`,
+      startTime: start,
+      value: `${start}-${end}`
+    };
+  }
+
+  const start = val;
+  let end = "";
+  if (jsDow === 5) {
+    end = "14:00";
+  } else {
+    const classicStarts = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
+    if (classicStarts.includes(start)) {
+      end = "22:00";
+    } else {
+      end = "14:00";
+    }
+  }
+
+  return {
+    label: `${start}–${end}`,
+    startTime: start,
+    value: `${start}-${end}`
+  };
+}
+
 function getIsraelTime() {
   const now = new Date();
   // We use the browser's locale conversion to ensure we are looking at Israel time
@@ -384,16 +444,14 @@ function shiftForDate(d, customRoom = null) {
     }
   }
 
-  const [h, m] = startStr.split(':').map(Number);
-  const endH = (h + 6) % 24;
-  const endStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  baseLabel = `${startStr}–${endStr}`;
+  const res = getShiftLabelAndStart(startStr, jsDow);
+  baseLabel = res.label;
 
   if (special && special.type === "close_early") {
-    return { label: `${special.title} (סוגרים מוקדם)`, specialType: "close_early", originalHours: baseLabel };
+    return { label: `${special.title} (סוגרים מוקדם)`, specialType: "close_early", originalHours: baseLabel, startTime: res.startTime, endTime: baseLabel.split('–')[1] };
   }
 
-  return { label: baseLabel, startTime: baseLabel.split('–')[0] };
+  return { label: baseLabel, startTime: res.startTime, endTime: baseLabel.split('–')[1] };
 }
 function monthKeyFrom(d) { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"); return `${y}-${m}`; }
 function prevSunday(d) {
@@ -958,17 +1016,17 @@ function renderSchedule(pack) {
           shiftTimeHtml = `<div class="pill ${sh.specialType ? 'wrap' : ''}">${sh.label}</div>`;
         } else {
           const isFriday = cur.getDay() === 5;
-          const opts = isFriday ? ["08:00", "08:30", "09:00"] : ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
-          const currentStart = sh.startTime || (isFriday ? "08:00" : "16:00");
+          const currentOptions = isFriday ? FRIDAY_SHIFT_OPTIONS : WEEKDAY_SHIFT_OPTIONS;
+          const currentNormalized = getShiftLabelAndStart(sh.label, cur.getDay());
           
           shiftTimeHtml = `
             <div class="shift-select-container">
               <select class="shift-time-select" data-key="${key}">
-                ${opts.map(opt => {
-                  const [h, m] = opt.split(':').map(Number);
-                  const endH = (h + 6) % 24;
-                  const endStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                  return `<option value="${opt}" ${opt === currentStart ? 'selected' : ''}>${opt}–${endStr}</option>`;
+                ${currentOptions.map(opt => {
+                  if (opt.disabled) {
+                    return `<option value="" disabled>${opt.label}</option>`;
+                  }
+                  return `<option value="${opt.value}" ${opt.value === currentNormalized.value ? 'selected' : ''}>${opt.label}</option>`;
                 }).join("")}
               </select>
             </div>
@@ -1134,25 +1192,23 @@ function showAdminTab(tabName) {
 function renderAdminShiftTimes(roomObj) {
   if (!adminShiftTimesList) return;
   const daysMap = {0: "ראשון", 1: "שני", 2: "שלישי", 3: "רביעי", 4: "חמישי", 5: "שישי"};
-  const defaultTimes = {0:"16:00", 1:"16:00", 2:"16:00", 3:"16:00", 4:"16:00", 5:"08:00"};
-  const regularOptions = ["14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
-  const fridayOptions = ["08:00", "08:30", "09:00"];
   
   let html = "";
   for (let i=0; i<6; i++) {
     const isFriday = i === 5;
-    const currentOptions = isFriday ? fridayOptions : regularOptions;
-    let val = (roomObj && roomObj.shiftTimes && roomObj.shiftTimes[i]) ? roomObj.shiftTimes[i] : defaultTimes[i];
+    const currentOptions = isFriday ? FRIDAY_SHIFT_OPTIONS : WEEKDAY_SHIFT_OPTIONS;
+    let val = (roomObj && roomObj.shiftTimes && roomObj.shiftTimes[i]) ? roomObj.shiftTimes[i] : (isFriday ? "08:00" : "16:00");
     
-    if (!currentOptions.includes(val)) {
-      val = currentOptions[0];
-    }
+    const normalized = getShiftLabelAndStart(val, i);
 
     html += `
       <div style="display:flex; flex-direction:column; gap:4px;">
         <label style="font-size:13px; color:var(--md-sys-color-on-surface-variant);">${daysMap[i]}</label>
         <select class="select shift-time-input" data-day="${i}">
-          ${currentOptions.map(opt => `<option value="${opt}" ${opt === val ? "selected" : ""}>${opt}</option>`).join("")}
+          ${currentOptions.map(opt => {
+            if (opt.disabled) return '';
+            return `<option value="${opt.value}" ${opt.value === normalized.value ? "selected" : ""}>${opt.label}</option>`;
+          }).join("")}
         </select>
       </div>
     `;
@@ -1661,7 +1717,13 @@ METHOD:PUBLISH
     if (who !== activePerson) continue;
 
     let shStart = [16, 0], shEnd = [22, 0];
-    if (d.getDay() === 5) { shStart = [8, 0]; shEnd = [14, 0]; }
+    if (sh.startTime && sh.endTime) {
+      shStart = sh.startTime.split(':').map(Number);
+      shEnd = sh.endTime.split(':').map(Number);
+    } else if (d.getDay() === 5) {
+      shStart = [8, 0];
+      shEnd = [14, 0];
+    }
 
     const uid = `${key}-${activePerson}@oz-schedule`;
     ics += `BEGIN:VEVENT
