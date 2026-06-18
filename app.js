@@ -28,10 +28,11 @@ function getIsraelTime() {
   return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
 }
 
-function getAutoStartDate(mode) {
+function getAutoStartDate(mode, roomObj = null) {
   const now = getIsraelTime();
   const day = now.getDay();
   const hour = now.getHours();
+  const minutes = now.getMinutes();
 
   if (mode === "hub" || mode === "view") {
     // Hub and View Only display current week until Saturday 07:00 PM (end of the work week)
@@ -43,15 +44,31 @@ function getAutoStartDate(mode) {
     }
     return hubSun;
   } else {
-    // Selection panel (regular mode) displays current week until Thursday 12:00 PM,
+    // Selection panel (regular mode) displays current week until Thursday 12:00 PM (or custom room reset time),
     // then switches to the NEXT week's board to allow filling constraints in advance.
     let targetSun = new Date(now);
     targetSun.setHours(0, 0, 0, 0);
     // Go to the Sunday of the current week
     targetSun.setDate(targetSun.getDate() - targetSun.getDay());
     
-    // Switch to next week only from Thursday 12:00 PM onwards
-    if ((day === 4 && hour >= 12) || day > 4) {
+    // Switch to next week only from reset time onwards
+    let resetDay = 4; // Thursday default
+    let resetHour = 12; // 12:00 default
+    let resetMin = 0;
+    
+    if (roomObj) {
+      if (roomObj.resetDay !== undefined) resetDay = parseInt(roomObj.resetDay, 10);
+      if (roomObj.resetTime) {
+        const [h, m] = roomObj.resetTime.split(":").map(Number);
+        resetHour = h;
+        resetMin = m || 0;
+      }
+    }
+    
+    const hasPassed = (day > resetDay) || 
+                      (day === resetDay && (hour > resetHour || (hour === resetHour && minutes >= resetMin)));
+                      
+    if (hasPassed) {
       targetSun.setDate(targetSun.getDate() + 7);
     }
     return targetSun;
@@ -1258,7 +1275,7 @@ function renderAdminRoomsList() {
 if (adminAddRoomBtn) {
   adminAddRoomBtn.addEventListener("click", () => {
     const newId = "room_" + Date.now();
-    editingRooms.push({ id: newId, name: "חדר חדש", people: [] });
+    editingRooms.push({ id: newId, name: "חדר חדש", people: [], resetDay: 4, resetTime: "12:00" });
     renderAdminRoomsList();
   });
 }
@@ -1346,6 +1363,15 @@ function openAdminModal(isExpanded) {
   } else {
     rangeWeeksInput.value = String(rangeWeeks);
   }
+
+  const resetDayInput = document.getElementById("resetDayInput");
+  const resetTimeInput = document.getElementById("resetTimeInput");
+  if (resetDayInput) {
+    resetDayInput.value = (roomObj && roomObj.resetDay !== undefined) ? String(roomObj.resetDay) : "4";
+  }
+  if (resetTimeInput) {
+    resetTimeInput.value = (roomObj && roomObj.resetTime) ? roomObj.resetTime : "12:00";
+  }
   
   renderAdminShiftTimes(roomObj);
   
@@ -1386,6 +1412,15 @@ adminSaveBtn.addEventListener("click", async () => {
   if (activeIdx !== -1) {
     editingRooms[activeIdx].startDate = newDate;
     editingRooms[activeIdx].rangeWeeks = newRange;
+
+    const resetDayInput = document.getElementById("resetDayInput");
+    const resetTimeInput = document.getElementById("resetTimeInput");
+    if (resetDayInput) {
+      editingRooms[activeIdx].resetDay = parseInt(resetDayInput.value, 10);
+    }
+    if (resetTimeInput) {
+      editingRooms[activeIdx].resetTime = resetTimeInput.value;
+    }
 
     const shiftTimeInputs = document.querySelectorAll('.shift-time-input');
     if (shiftTimeInputs.length > 0) {
@@ -1504,11 +1539,11 @@ async function loadGlobalSettings() {
           startDate = startOfDay(new Date(currentRoomData.startDate));
        }
        if (isNaN(startDate.getTime())) {
-          startDate = getAutoStartDate("selection");
+          startDate = getAutoStartDate("selection", currentRoomData);
        }
     }
 
-    // Auto-transition of rooms once Thursday 12:00 PM of the start week has passed
+    // Auto-transition of rooms once custom resetDay and resetTime (or default Thursday 12:00 PM) has passed
     try {
       if (!isViewMode && !isHubMode) {
         let anyChanged = false;
@@ -1517,13 +1552,22 @@ async function loadGlobalSettings() {
         for (const r of ROOMS) {
           if (r.startDate) {
             let rStart = startOfDay(new Date(r.startDate));
-            // Thursday 12:00 PM of the week starting at rStart
-            let transitionTime = new Date(rStart.getTime() + 4 * MS_DAY + 12 * 60 * 60 * 1000);
+            
+            let resetDay = r.resetDay !== undefined ? parseInt(r.resetDay, 10) : 4;
+            let resetHour = 12;
+            let resetMin = 0;
+            if (r.resetTime) {
+              const [h, m] = r.resetTime.split(":").map(Number);
+              resetHour = h;
+              resetMin = m || 0;
+            }
+            
+            let transitionTime = new Date(rStart.getTime() + resetDay * MS_DAY + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
             
             while (nowIsrael >= transitionTime) {
               rStart = new Date(rStart.getTime() + 7 * MS_DAY);
               r.startDate = fmtDateKey(rStart);
-              transitionTime = new Date(rStart.getTime() + 4 * MS_DAY + 12 * 60 * 60 * 1000);
+              transitionTime = new Date(rStart.getTime() + resetDay * MS_DAY + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
               anyChanged = true;
             }
           }
