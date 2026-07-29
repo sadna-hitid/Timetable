@@ -138,11 +138,15 @@
       <div id="adminTabRoomContent">
         <p>פעולות מיוחדות עבור החדר הנוכחי (<span id="adminCurrentRoomLabel" style="font-weight:700;"></span>).</p>
         
-        <div class="row">
-          <label for="dateInput" style="min-width:120px;">תאריך התחלה לחדר זה</label>
+        <div class="row" id="startDateRow">
+          <label for="dateInput" id="startDateLabel" style="min-width:120px; cursor:pointer;" title="לחץ Ctrl+לחיצה להוספה/ביטול תאריך סיום">תאריך התחלה לחדר זה</label>
           <input id="dateInput" class="date" type="date" style="flex:1" />
         </div>
-        <div class="row" style="margin-bottom:12px;">
+        <div class="row" id="endDateRow" style="margin-bottom:12px; display:none;">
+          <label for="endDateInput" style="min-width:120px;">תאריך סיום לחדר זה</label>
+          <input id="endDateInput" class="date" type="date" style="flex:1" />
+        </div>
+        <div class="row" id="rangeWeeksRow" style="margin-bottom:12px;">
           <label for="rangeWeeksInput" style="min-width:120px;">משך זמן תצוגה</label>
           <select id="rangeWeeksInput" class="select" style="flex:1">
             <option value="1">שבוע 1</option>
@@ -450,7 +454,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.5.0</div>
+  <div class="version-tag">v1.5.1</div>
 
   <!-- Reset Notification Modal -->
   <div id="resetNotificationBackdrop" class="modal-backdrop">

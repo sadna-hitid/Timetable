@@ -1153,6 +1153,52 @@ const adminSaveBtn = document.getElementById("adminSaveBtn");
 const adminCancelBtn = document.getElementById("adminCancelBtn");
 const dateInput = document.getElementById("dateInput");
 const rangeWeeksInput = document.getElementById("rangeWeeksInput");
+const endDateRow = document.getElementById("endDateRow");
+const endDateInput = document.getElementById("endDateInput");
+const rangeWeeksRow = document.getElementById("rangeWeeksRow");
+const startDateRow = document.getElementById("startDateRow");
+const startDateLabel = document.getElementById("startDateLabel");
+
+function setEndDateModeUI(enabled) {
+  if (enabled) {
+    if (endDateRow) endDateRow.style.display = "flex";
+    if (rangeWeeksInput) rangeWeeksInput.disabled = true;
+    if (rangeWeeksRow) rangeWeeksRow.style.opacity = "0.5";
+  } else {
+    if (endDateRow) endDateRow.style.display = "none";
+    if (endDateInput) endDateInput.value = "";
+    if (rangeWeeksInput) rangeWeeksInput.disabled = false;
+    if (rangeWeeksRow) rangeWeeksRow.style.opacity = "1";
+  }
+}
+
+function toggleEndDateMode(e) {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    const isCurrentlyActive = endDateRow && endDateRow.style.display !== "none";
+    if (isCurrentlyActive) {
+      setEndDateModeUI(false);
+    } else {
+      setEndDateModeUI(true);
+      if (endDateInput && !endDateInput.value) {
+        const baseDateStr = dateInput ? dateInput.value : "";
+        let baseDate = baseDateStr ? startOfDay(new Date(baseDateStr)) : startOfDay(new Date());
+        if (isNaN(baseDate.getTime())) baseDate = startOfDay(new Date());
+        const defaultEnd = new Date(baseDate.getTime() + 26 * MS_DAY);
+        endDateInput.value = fmtDateKey(defaultEnd);
+      }
+    }
+  }
+}
+
+if (startDateLabel) startDateLabel.addEventListener("click", toggleEndDateMode);
+if (dateInput) dateInput.addEventListener("click", toggleEndDateMode);
+if (startDateRow) startDateRow.addEventListener("click", (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    toggleEndDateMode(e);
+  }
+});
 
 const specialDateInput = document.getElementById("specialDateInput");
 const specialTitleInput = document.getElementById("specialTitleInput");
@@ -1420,6 +1466,13 @@ function openAdminModal(isExpanded) {
     rangeWeeksInput.value = String(rangeWeeks);
   }
 
+  if (roomObj && roomObj.endDate) {
+    if (endDateInput) endDateInput.value = roomObj.endDate;
+    setEndDateModeUI(true);
+  } else {
+    setEndDateModeUI(false);
+  }
+
   const resetDayInput = document.getElementById("resetDayInput");
   const resetTimeInput = document.getElementById("resetTimeInput");
   if (resetDayInput) {
@@ -1468,6 +1521,12 @@ adminSaveBtn.addEventListener("click", async () => {
   if (activeIdx !== -1) {
     editingRooms[activeIdx].startDate = newDate;
     editingRooms[activeIdx].rangeWeeks = newRange;
+
+    if (endDateRow && endDateRow.style.display !== "none" && endDateInput && endDateInput.value) {
+      editingRooms[activeIdx].endDate = endDateInput.value;
+    } else {
+      delete editingRooms[activeIdx].endDate;
+    }
 
     const resetDayInput = document.getElementById("resetDayInput");
     const resetTimeInput = document.getElementById("resetTimeInput");
@@ -1670,7 +1729,16 @@ async function loadGlobalSettings() {
       identityBackdrop.style.display = "flex";
     }
     whoamiEl.textContent = "אתה: " + activePerson;
-    endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY)); // Approx
+    if (currentRoomData && currentRoomData.endDate) {
+      const parsedEnd = startOfDay(new Date(currentRoomData.endDate));
+      if (!isNaN(parsedEnd.getTime())) {
+        endDate = parsedEnd;
+      } else {
+        endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY));
+      }
+    } else {
+      endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY)); // Approx
+    }
     monthKey = monthKeyFrom(startDate);
     renderPeopleUI();
 
