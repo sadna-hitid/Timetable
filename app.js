@@ -931,21 +931,28 @@ function computeSchedule() {
     }
   }
 
-  return { assign, weekCounts, fridayCounts };
+  return { assign, weekCounts, fridayCounts, totalCounts };
 }
 
 function renderSummary(pack) {
   const summaryBox = document.getElementById("summaryBox");
-  const { weekCounts, fridayCounts } = pack;
+  const { weekCounts, fridayCounts, totalCounts } = pack;
+
+  const currentRoomObj = ROOMS.find(r => r.id === activeRoom);
+  const isPeriodMode = Boolean(currentRoomObj && currentRoomObj.endDate);
+
+  const titleText = isPeriodMode ? "סיכום תקופה + ימי שישי" : "סיכום שבועי + ימי שישי";
+  const colHeaderText = isPeriodMode ? "תקופה" : "שבוע";
+
   const html = `
     <div class="panel" style="margin-top:16px">
-      <div class="hd"><h3 style="margin:0">סיכום שבועי + ימי שישי</h3></div>
+      <div class="hd"><h3 style="margin:0">${titleText}</h3></div>
       <div class="bd">
         <div style="overflow-x:auto">
           <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center">
             <thead>
               <tr style="border-bottom:1px solid var(--border)">
-                <th style="padding:8px; text-align:right">שבוע</th>
+                <th style="padding:8px; text-align:right">${colHeaderText}</th>
                 ${PEOPLE.map(p => `<th style="padding:8px">${p}</th>`).join("")}
               </tr>
             </thead>
@@ -956,6 +963,12 @@ function renderSummary(pack) {
                   ${PEOPLE.map(p => `<td style="padding:8px">${wc[p] || 0}</td>`).join("")}
                 </tr>
               `).join("")}
+              ${isPeriodMode && totalCounts ? `
+                <tr style="border-top:2px solid var(--border); font-weight:700; background:var(--md-sys-color-surface-container-high)">
+                  <td style="padding:8px; text-align:right">סה״כ לתקופה</td>
+                  ${PEOPLE.map(p => `<td style="padding:8px">${totalCounts[p] || 0}</td>`).join("")}
+                </tr>
+              ` : ""}
             </tbody>
           </table>
         </div>
