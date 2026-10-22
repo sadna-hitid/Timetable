@@ -21,6 +21,8 @@ const db = getFirestore(app);
 // ----- Constants -----
 let PEOPLE = ["עובד 1", "עובד 2", "עובד 3"];
 const MS_DAY = 86400000;
+// Calendar-safe day arithmetic (immune to DST shifts, unlike adding MS_DAY)
+function addDays(d, n) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
 
 const WEEKDAY_SHIFT_OPTIONS = [
   { value: "14:30-22:00", label: "14:30–22:00" },
@@ -326,8 +328,8 @@ if (isViewMode) {
     viewPrevWeekBtn.style.display = "inline-block";
     viewPrevWeekBtn.addEventListener("click", () => {
       const weekStart = new Date(startDate);
-      while (weekStart.getDay() !== 0) { weekStart.setTime(weekStart.getTime() - MS_DAY); }
-      const prevWeekStart = new Date(weekStart.getTime() - 7 * MS_DAY);
+      while (weekStart.getDay() !== 0) { weekStart.setDate(weekStart.getDate() - 1); }
+      const prevWeekStart = addDays(weekStart, -7);
       
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set("week", fmtDateKey(prevWeekStart));
@@ -357,7 +359,7 @@ if (isHubMode) syncUrl.searchParams.set("view", "hub");
 else if (isViewMode) syncUrl.searchParams.set("view", "1");
 window.history.replaceState({}, "", syncUrl.toString());
 
-let endDate = new Date(startDate.getTime() + 30 * MS_DAY);
+let endDate = addDays(startDate, 30);
 
 let monthKey = monthKeyFrom(startDate);
 
@@ -413,7 +415,7 @@ function fmtDM(d) {
   return `${dd}.${mm}`;
 }
 function fmtHuman(d) { return fmtDM(d) + "." + d.getFullYear(); }
-function rangeDays(d0, d1) { const out = []; let t = startOfDay(d0).getTime(), t1 = startOfDay(d1).getTime(); for (; t <= t1; t += MS_DAY) out.push(new Date(t)); return out; }
+function rangeDays(d0, d1) { const out = []; let t = startOfDay(d0).getTime(), t1 = startOfDay(d1).getTime(); for (let d = new Date(t); d.getTime() <= t1; d = addDays(d, 1)) out.push(d); return out; }
 const hebDays = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 const hebDaysLong = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 function shiftForDate(d, customRoom = null) {
@@ -455,13 +457,12 @@ function shiftForDate(d, customRoom = null) {
 }
 function monthKeyFrom(d) { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"); return `${y}-${m}`; }
 function prevSunday(d) {
-  let x = startOfDay(d);
-  while (x.getDay() !== 0) { x = new Date(x.getTime() - MS_DAY); }
-  return x;
+  const x = startOfDay(d);
+  return addDays(x, -x.getDay());
 }
 function weekIndexFor(date) {
   let s = prevSunday(startDate);
-  return Math.floor((startOfDay(date) - s) / (7 * MS_DAY));
+  return Math.floor(Math.round((startOfDay(date) - s) / MS_DAY) / 7);
 }
 
 // ----- UI: Person Selection -----
@@ -581,6 +582,22 @@ identityStartBtn.addEventListener("click", () => {
 });
 
 // ----- UI: Render Calendar (Constraints) -----
+// Coalesce bursts of live-sync snapshots into a single render per frame
+let liveRenderQueued = false;
+function scheduleLiveRender() {
+  if (liveRenderQueued) return;
+  liveRenderQueued = true;
+  requestAnimationFrame(() => {
+    liveRenderQueued = false;
+    if (isHubMode) {
+      renderHub();
+    } else {
+      renderCalendar();
+      refreshScheduleUI();
+    }
+  });
+}
+
 function renderCalendar() {
   const days = rangeDays(startDate, endDate);
   // Filter out Saturday (6) from headers
@@ -809,126 +826,86 @@ function computeSchedule() {
   const weekCounts = []; // [ {נבו: 1, טל: 2}, ... ]
   const assign = {};
 
-  // Pre-calculate weekly availability frequency (Least Constrained Resource per week)
-  const weeklyFreq = []; // [ {נבו: 3, טל: 5}, ... ]
+  // Group shift days by week
+  const weeks = [];
   for (const d of days) {
-    const wIdx = weekIndexFor(d);
-    if (!weeklyFreq[wIdx]) weeklyFreq[wIdx] = Object.fromEntries(PEOPLE.map(p => [p, 0]));
     const sh = shiftForDate(d);
     if (!sh || sh.specialType === "no_shifts") continue;
-    const key = fmtDateKey(d);
-    const row = state[key] || {};
-    for (const p of PEOPLE) {
-      // We only count "Perfectly Available" (v=0) days for this metric.
-      // This makes people with fewer v=0 options more "desperate" to take them.
-      if (!excludedUsers.includes(p) && Number(row[p] ?? 0) === 0) weeklyFreq[wIdx][p]++;
-    }
+    const wIdx = weekIndexFor(d);
+    (weeks[wIdx] ||= []).push(d);
   }
 
-  for (const d of days) {
-    const jsDow = d.getDay();
-    const sh = shiftForDate(d);
-    if (!sh || sh.specialType === "no_shifts") continue;
+  // Cost weights (lower total cost wins). Balance dominates everything else.
+  const W_BALANCE = 1000;  // sum of squared weekly counts -> spreads shifts as evenly as possible
+  const W_PREFER_NOT = 10; // each "prefer not" (v=1) assignment
+  const W_FRIDAY = 3;      // Friday goes to whoever has had fewer Fridays
+  const W_TOTAL = 1;       // long-run fairness across weeks
 
-    const key = fmtDateKey(d);
-    const wIdx = weekIndexFor(d);
-    if (!weekCounts[wIdx]) weekCounts[wIdx] = Object.fromEntries(PEOPLE.map(p => [p, 0]));
+  for (let wIdx = 0; wIdx < weeks.length; wIdx++) {
+    const wDays = weeks[wIdx];
+    weekCounts[wIdx] = Object.fromEntries(PEOPLE.map(p => [p, 0]));
+    if (!wDays) continue;
 
-    const row = state[key] || {};
+    // Build per-day slot info: fixed manual pick or list of candidates with their preference value
+    const slots = wDays.map(d => {
+      const key = fmtDateKey(d);
+      const row = state[key] || {};
+      const isFri = d.getDay() === 5;
+      const manualWho = (row.manualAssigns || {})[activeRoom];
+      if (manualWho) return { key, isFri, fixed: manualWho };
+      const cands = PEOPLE
+        .filter(p => !excludedUsers.includes(p) && Number(row[p] ?? 0) < 2)
+        .map(p => ({ p, pref: isBypassMode ? 0 : Number(row[p] ?? 0) }));
+      return { key, isFri, cands };
+    });
 
-    // Sort all people who aren't "Unavailable" (v=2)
-    const candidates = PEOPLE.filter(p => !excludedUsers.includes(p) && Number(row[p] ?? 0) < 2);
-    // Algorithm Bypass logic
-    if (isBypassMode) {
-       // In bypass mode, we ignore constraints and balance primarily by week
-       candidates.sort((a, b) => {
-         const wcA = weekCounts[wIdx][a];
-         const wcB = weekCounts[wIdx][b];
-         if (wcA !== wcB) return wcA - wcB;
-         return totalCounts[a] - totalCounts[b];
-       });
-    } else {
-      candidates.sort((a, b) => {
-        // 1. Prioritize people with fewer shifts assigned so far in THIS WEEK
-        const wcA = weekCounts[wIdx][a];
-        const wcB = weekCounts[wIdx][b];
-        if (wcA !== wcB) return wcA - wcB;
+    // Most constrained days first -> much stronger pruning
+    const order = slots.map((_, i) => i).sort((i, j) =>
+      (slots[i].fixed ? -1 : slots[i].cands.length) - (slots[j].fixed ? -1 : slots[j].cands.length));
 
-        // 2. Prioritize "Available" (0) over "Prefer Not" (1)
-        const vA = Number(row[a] ?? 0);
-        const vB = Number(row[b] ?? 0);
-        if (vA !== vB) return vA - vB;
+    const cnt = Object.fromEntries(PEOPLE.map(p => [p, 0]));
+    const pick = new Array(slots.length).fill(null);
+    let best = null, bestCost = Infinity;
 
-        // 3. Weekly Availability Frequency (LCR per week)
-        // Prioritize people who have FEWER options in this specific week (only counting v=0 days)
-        // This acts as a powerful tie-breaker when both are "Available"
-        const fA = weeklyFreq[wIdx][a];
-        const fB = weeklyFreq[wIdx][b];
-        if (fA !== fB) return fA - fB;
-
-        // 4. For Fridays, prioritize people with fewer Fridays assigned so far
-        if (jsDow === 5) {
-          if (fridayCounts[a] !== fridayCounts[b]) return fridayCounts[a] - fridayCounts[b];
-        }
-
-        // 5. Final tie-breaker: Overall period counts
-        return totalCounts[a] - totalCounts[b];
-      });
-    }
-
-    const pick = candidates[0] || null;
-
-    if (pick) {
-      totalCounts[pick]++;
-      weekCounts[wIdx][pick]++;
-      if (jsDow === 5) fridayCounts[pick]++;
-      assign[key] = pick;
-    }
-  }
-
-  // Apply manual overrides on top (Algorithm Bypass)
-  for (const d of days) {
-    const jsDow = d.getDay();
-    if (jsDow === 6) continue;
-    const sh = shiftForDate(d);
-    if (!sh || sh.specialType === "no_shifts") continue;
-
-    const key = fmtDateKey(d);
-    const row = state[key] || {};
-    const manualAssigns = row.manualAssigns || {};
-    const manualWho = manualAssigns[activeRoom];
-
-    if (manualWho) {
-      const oldWho = assign[key];
-      const wIdx = weekIndexFor(d);
-
-      if (oldWho && PEOPLE.includes(oldWho)) {
-        totalCounts[oldWho]--;
-        if (weekCounts[wIdx] && weekCounts[wIdx][oldWho] !== undefined) {
-          weekCounts[wIdx][oldWho]--;
-        }
-        if (jsDow === 5 && fridayCounts[oldWho] !== undefined) {
-          fridayCounts[oldWho]--;
-        }
+    // Exact branch & bound: every term is non-negative, so partial cost is a valid lower bound
+    const dfs = (k, cost) => {
+      if (cost >= bestCost) return;
+      if (k === order.length) { bestCost = cost; best = pick.slice(); return; }
+      const i = order[k], slot = slots[i];
+      if (slot.fixed) {
+        const p = slot.fixed, known = p in cnt;
+        const add = known ? W_BALANCE * (2 * cnt[p] + 1) : 0;
+        if (known) cnt[p]++;
+        pick[i] = p; dfs(k + 1, cost + add);
+        if (known) cnt[p]--;
+        return;
       }
-
-      if (PEOPLE.includes(manualWho)) {
-        if (totalCounts[manualWho] === undefined) totalCounts[manualWho] = 0;
-        totalCounts[manualWho]++;
-
-        if (weekCounts[wIdx]) {
-          if (weekCounts[wIdx][manualWho] === undefined) weekCounts[wIdx][manualWho] = 0;
-          weekCounts[wIdx][manualWho]++;
-        }
-
-        if (jsDow === 5) {
-          if (fridayCounts[manualWho] === undefined) fridayCounts[manualWho] = 0;
-          fridayCounts[manualWho]++;
-        }
+      if (slot.cands.length === 0) { pick[i] = null; dfs(k + 1, cost); return; }
+      // Try the cheapest candidates first so a good bound is found early
+      const opts = slot.cands.map(({ p, pref }) => ({
+        p,
+        add: W_BALANCE * (2 * cnt[p] + 1) + W_PREFER_NOT * pref +
+             (slot.isFri ? W_FRIDAY * fridayCounts[p] : 0) + W_TOTAL * totalCounts[p]
+      })).sort((x, y) => x.add - y.add);
+      for (const { p, add } of opts) {
+        cnt[p]++; pick[i] = p;
+        dfs(k + 1, cost + add);
+        cnt[p]--;
       }
+      pick[i] = null;
+    };
+    dfs(0, 0);
 
-      assign[key] = manualWho;
-    }
+    slots.forEach((slot, i) => {
+      const p = best ? best[i] : null;
+      if (!p) return;
+      assign[slot.key] = p;
+      if (p in totalCounts) {
+        totalCounts[p]++;
+        weekCounts[wIdx][p]++;
+        if (slot.isFri) fridayCounts[p]++;
+      }
+    });
   }
 
   return { assign, weekCounts, fridayCounts, totalCounts };
@@ -993,13 +970,13 @@ function renderSchedule(pack) {
     <div class="col-hd">ד׳</div><div class="col-hd">ה׳</div><div class="col-hd">ו׳</div>
   `;
   let weekStart = new Date(startDate);
-  while (weekStart.getDay() !== 0) { weekStart = new Date(weekStart.getTime() - MS_DAY); }
+  while (weekStart.getDay() !== 0) { weekStart = addDays(weekStart, -1); }
 
   while (weekStart <= endDate) {
-    const weekEnd = new Date(weekStart.getTime() + 6 * MS_DAY);
+    const weekEnd = addDays(weekStart, 6);
     html += `<div class="muted">${fmtDM(weekStart)} – ${fmtDM(weekEnd)}</div>`;
     for (let i = 0; i < 6; i++) {
-      const cur = new Date(weekStart.getTime() + i * MS_DAY);
+      const cur = addDays(weekStart, i);
       const key = fmtDateKey(cur);
       const sh = shiftForDate(cur);
       const inRange = cur >= startDate && cur <= endDate;
@@ -1065,7 +1042,7 @@ function renderSchedule(pack) {
         `;
       }
     }
-    weekStart = new Date(weekStart.getTime() + 7 * MS_DAY);
+    weekStart = addDays(weekStart, 7);
   }
   scheduleGrid.innerHTML = html;
 
@@ -1198,7 +1175,7 @@ function toggleEndDateMode(e) {
         const baseDateStr = dateInput ? dateInput.value : "";
         let baseDate = baseDateStr ? startOfDay(new Date(baseDateStr)) : startOfDay(new Date());
         if (isNaN(baseDate.getTime())) baseDate = startOfDay(new Date());
-        const defaultEnd = new Date(baseDate.getTime() + 26 * MS_DAY);
+        const defaultEnd = addDays(baseDate, 26);
         endDateInput.value = fmtDateKey(defaultEnd);
       }
     }
@@ -1469,7 +1446,7 @@ function openAdminModal(isExpanded) {
   } else {
     let propDate = startOfDay(new Date());
     if (propDate.getDay() !== 0) {
-      propDate = new Date(propDate.getTime() + (7 - propDate.getDay()) * MS_DAY);
+      propDate = addDays(propDate, 7 - propDate.getDay());
     }
     dateInput.value = fmtDateKey(propDate);
   }
@@ -1690,12 +1667,12 @@ async function loadGlobalSettings() {
               resetMin = m || 0;
             }
             
-            let transitionTime = new Date(rStart.getTime() + resetDay * MS_DAY + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
+            let transitionTime = new Date(addDays(rStart, resetDay).getTime() + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
             
             while (nowIsrael >= transitionTime) {
-              rStart = new Date(rStart.getTime() + 7 * MS_DAY);
+              rStart = addDays(rStart, 7);
               r.startDate = fmtDateKey(rStart);
-              transitionTime = new Date(rStart.getTime() + resetDay * MS_DAY + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
+              transitionTime = new Date(addDays(rStart, resetDay).getTime() + resetHour * 60 * 60 * 1000 + resetMin * 60 * 1000);
               anyChanged = true;
             }
           }
@@ -1747,10 +1724,10 @@ async function loadGlobalSettings() {
       if (!isNaN(parsedEnd.getTime())) {
         endDate = parsedEnd;
       } else {
-        endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY));
+        endDate = addDays(startDate, rangeWeeks * 7 - 2);
       }
     } else {
-      endDate = new Date(startDate.getTime() + (rangeWeeks * 7 * MS_DAY) - (2 * MS_DAY)); // Approx
+      endDate = addDays(startDate, rangeWeeks * 7 - 2); // Approx
     }
     monthKey = monthKeyFrom(startDate);
     renderPeopleUI();
@@ -1872,8 +1849,8 @@ const hubPrevWeekBtn = document.getElementById("hubPrevWeekBtn");
 if (hubPrevWeekBtn) {
   hubPrevWeekBtn.addEventListener("click", () => {
     const weekStart = new Date(startDate);
-    while (weekStart.getDay() !== 0) { weekStart.setTime(weekStart.getTime() - MS_DAY); }
-    const prevWeekStart = new Date(weekStart.getTime() - 7 * MS_DAY);
+    while (weekStart.getDay() !== 0) { weekStart.setDate(weekStart.getDate() - 1); }
+    const prevWeekStart = addDays(weekStart, -7);
     
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set("week", fmtDateKey(prevWeekStart));
@@ -1885,8 +1862,8 @@ if (hubPrevWeekBtn) {
 function renderHub() {
   const weekStart = new Date(startDate);
   // Get Sunday of current week
-  while (weekStart.getDay() !== 0) { weekStart.setTime(weekStart.getTime() - MS_DAY); }
-  const weekEnd = new Date(weekStart.getTime() + 5 * MS_DAY); // Friday
+  while (weekStart.getDay() !== 0) { weekStart.setDate(weekStart.getDate() - 1); }
+  const weekEnd = addDays(weekStart, 5); // Friday
   
   hubDateBadge.textContent = "שבוע נוכחי: " + fmtDM(weekStart) + " – " + fmtDM(weekEnd);
   
@@ -1914,7 +1891,7 @@ function renderHub() {
     `;
     
     for (let i = 0; i < 6; i++) {
-      const cur = new Date(weekStart.getTime() + i * MS_DAY);
+      const cur = addDays(weekStart, i);
       const key = fmtDateKey(cur);
       const sh = shiftForDate(cur, room);
       
@@ -1996,11 +1973,7 @@ onAuthStateChanged(auth, async (user) => {
         excludedUsers = [];
       }
       updatePersonUI();
-      if (isHubMode) {
-        renderHub();
-      } else {
-        refreshScheduleUI();
-      }
+      scheduleLiveRender();
     }, (err) => console.log("Meta snapshot error", err));
 
     onSnapshot(collection(db, "constraints", monthKey, "days"), (snap) => {
@@ -2009,12 +1982,7 @@ onAuthStateChanged(auth, async (user) => {
         if (ch.doc.id === "_meta") return;
         state[ch.doc.id] = ch.doc.data();
       });
-      if (isHubMode) {
-        renderHub();
-      } else {
-        renderCalendar();
-        refreshScheduleUI();
-      }
+      scheduleLiveRender();
     });
   } else {
     signInAnonymously(auth).catch(console.error);
