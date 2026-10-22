@@ -6,7 +6,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>לוח שיבוצים - מערכת</title>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1.5.3" />
+  <script>
+    // App version: keep in sync with version.json, the version tag and the ?v= asset params below.
+    window.APP_VERSION = "1.5.4";
+    // Purge every cache layer for this site, then reload from the network.
+    window.forceCacheClear = async function () {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        const v = window.APP_VERSION;
+        const files = ["./", "index.html", "app.js", "styles.css", "app.js?v=" + v, "styles.css?v=" + v];
+        await Promise.all(files.map(f => fetch(f, { cache: "reload" }).catch(() => {})));
+      } finally {
+        const url = new URL(location.href);
+        url.searchParams.set("_cb", Date.now());
+        location.replace(url.toString());
+      }
+    };
+    // Auto purge once per user after each update, and whenever this page itself is a stale cached copy.
+    (async function () {
+      const KEY = "app_version";
+      let seen = null;
+      try { seen = localStorage.getItem(KEY); } catch (e) {}
+      if (seen !== window.APP_VERSION) {
+        try { localStorage.setItem(KEY, window.APP_VERSION); } catch (e) { return; }
+        return window.forceCacheClear();
+      }
+      try {
+        const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+        const latest = (await res.json()).version;
+        const guard = "cache_purged_for_" + latest;
+        if (latest && latest !== window.APP_VERSION && !sessionStorage.getItem(guard)) {
+          sessionStorage.setItem(guard, "1");
+          window.forceCacheClear();
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1.5.4" />
 </head>
 
 <body>
@@ -455,7 +498,7 @@
   </div>
 
   <!-- Version Tag -->
-  <div class="version-tag">v1.5.3</div>
+  <div class="version-tag">v1.5.4</div>
 
   <!-- Reset Notification Modal -->
   <div id="resetNotificationBackdrop" class="modal-backdrop">
@@ -471,7 +514,7 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=1.5.3"></script>
+  <script type="module" src="app.js?v=1.5.4"></script>
 </body>
 
 </html>

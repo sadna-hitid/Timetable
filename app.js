@@ -2054,26 +2054,9 @@ window.handleManualAssign = function(dateKey) {
 updateAdvancedBtns();
 
 
-// ----- Admin: Force cache clear -----
-// Re-fetches every app file bypassing the HTTP cache, drops Cache Storage / service workers, then reloads.
-document.getElementById("adminClearCacheBtn")?.addEventListener("click", async (e) => {
-  const btn = e.currentTarget;
-  btn.disabled = true;
-  btn.textContent = "מנקה מטמון...";
-  try {
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    if (window.caches) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    const files = ["./", "index.html", "app.js", "styles.css"];
-    await Promise.all(files.map(f => fetch(f, { cache: "reload" }).catch(() => {})));
-  } finally {
-    const url = new URL(location.href);
-    url.searchParams.set("_cb", Date.now());
-    location.replace(url.toString());
-  }
+// ----- Admin: Force cache clear (logic lives in index.html) -----
+document.getElementById("adminClearCacheBtn")?.addEventListener("click", (e) => {
+  e.currentTarget.disabled = true;
+  e.currentTarget.textContent = "מנקה מטמון...";
+  window.forceCacheClear();
 });
